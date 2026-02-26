@@ -5,6 +5,8 @@ import Sale from "@/models/Sale";
 import Product from "@/models/Product";
 import { getCurrentStock } from "@/services/stockService";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await connectDB();
@@ -23,7 +25,7 @@ export async function GET() {
     ]);
 
     const products = await Product.find({ isActive: true });
-    
+
     const productWiseStock = await Promise.all(products.map(async (p) => {
       const stock = await getCurrentStock(p._id.toString());
       return {
