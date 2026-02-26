@@ -36,14 +36,14 @@ export async function deleteSale(id: string) {
   }
 }
 
-export async function getDetailedReport(filters: { 
-  fromDate?: string; 
-  toDate?: string; 
+export async function getDetailedReport(filters: {
+  fromDate?: string;
+  toDate?: string;
   productId?: string;
 }) {
   try {
     await connectDB();
-    
+
     const query: any = { isDeleted: false };
     if (filters.productId) query.productId = filters.productId;
     if (filters.fromDate || filters.toDate) {
@@ -69,10 +69,10 @@ export async function getDetailedReport(filters: {
         .sort({ date: 1 });
 
       const totalSold = sales.reduce((acc, s) => acc + s.quantity, 0);
-      
+
       return {
         lotId: lot._id.toString(),
-        date: lot.date.toISOString().split('T')[0],
+        date: new Date(lot.date).toISOString().split('T')[0],
         productName: lot.productId?.name || "Deleted Product",
         unitType: lot.productId?.unitType || "N/A",
         lotName: lot.lotName,
@@ -82,7 +82,7 @@ export async function getDetailedReport(filters: {
         purchasedTotal: lot.totalAmount || (lot.quantity * lot.rate),
         sales: sales.map(s => ({
           saleId: s._id.toString(),
-          date: s.date.toISOString().split('T')[0],
+          date: new Date(s.date).toISOString().split('T')[0],
           customerName: s.customerId?.name || "N/A",
           quantity: s.quantity,
           rate: s.rate,

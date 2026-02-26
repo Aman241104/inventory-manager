@@ -18,7 +18,7 @@ import mongoose, { Types } from "mongoose";
 export async function addPurchase(data: Partial<IPurchase> & { date: string | Date }) {
   try {
     await connectDB();
-    
+
     const purchaseDate = new Date(data.date);
     const startOfDay = new Date(purchaseDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -35,7 +35,9 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
 
     if (existingLot) {
       existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
-      existingLot.rate = data.rate; 
+      if (data.rate !== undefined) {
+        existingLot.rate = data.rate;
+      }
       existingLot.notes = (existingLot.notes ? existingLot.notes + "; " : "") + (data.notes || "");
       await existingLot.save();
     } else {
@@ -65,10 +67,10 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
   try {
     console.log("addSale action received data:", data);
     await connectDB();
-    
+
     if (!data.purchaseId || data.purchaseId === "") {
-        console.error("addSale error: No purchaseId provided");
-        return { success: false, error: "Please select a valid Batch/Lot" };
+      console.error("addSale error: No purchaseId provided");
+      return { success: false, error: "Please select a valid Batch/Lot" };
     }
 
     const lotId = new mongoose.Types.ObjectId(data.purchaseId);
@@ -82,7 +84,7 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
 
     const soldSoFar = previousSales[0]?.total || 0;
     const currentAvailable = lot.quantity - soldSoFar;
-    
+
     // The sale quantity will deplete the currentAvailable
     const isExtraSold = Number(data.quantity) > currentAvailable;
 
@@ -94,13 +96,13 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
       date: new Date(data.date),
       isExtraSold
     });
-    
+
     const savedSale = await sale.save();
-    
+
     revalidatePath("/transactions");
     revalidatePath("/details");
     revalidatePath("/");
-    
+
     return { success: true, isExtraSold, data: JSON.parse(JSON.stringify(savedSale)) };
   } catch (error) {
     console.error("Sale error detail:", error);
@@ -151,28 +153,28 @@ export async function addProductAction(name: string, unitType: string) {
 }
 
 export async function getLotsForProduct(productId: string) {
-    try {
-        await connectDB();
-        const lots = await Purchase.find({ productId, isDeleted: false })
-            .sort({ date: -1 });
-            
-        const lotsWithAvailable = await Promise.all(lots.map(async (lot) => {
-            const sales = await Sale.aggregate([
-                { $match: { purchaseId: lot._id, isDeleted: false } },
-                { $group: { _id: null, total: { $sum: "$quantity" } } }
-            ]);
-            const soldSoFar = sales[0]?.total || 0;
-            return {
-                ...lot.toObject(),
-                _id: lot._id.toString(),
-                availableQty: lot.quantity - soldSoFar
-            };
-        }));
-            
-        return { success: true, data: JSON.parse(JSON.stringify(lotsWithAvailable)) };
-    } catch (error) {
-        return { success: false, error: "Failed to fetch lots" };
-    }
+  try {
+    await connectDB();
+    const lots = await Purchase.find({ productId, isDeleted: false })
+      .sort({ date: -1 });
+
+    const lotsWithAvailable = await Promise.all(lots.map(async (lot) => {
+      const sales = await Sale.aggregate([
+        { $match: { purchaseId: lot._id, isDeleted: false } },
+        { $group: { _id: null, total: { $sum: "$quantity" } } }
+      ]);
+      const soldSoFar = sales[0]?.total || 0;
+      return {
+        ...lot.toObject(),
+        _id: lot._id.toString(),
+        availableQty: lot.quantity - soldSoFar
+      };
+    }));
+
+    return { success: true, data: JSON.parse(JSON.stringify(lotsWithAvailable)) };
+  } catch (error) {
+    return { success: false, error: "Failed to fetch lots" };
+  }
 }
 
 export async function getPurchases(fromDate?: string, toDate?: string) {

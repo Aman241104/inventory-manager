@@ -34,13 +34,13 @@ export async function getDashboardStats() {
           unitType: lot.productId?.unitType || "N/A",
           lotName: lot.lotName,
           purchaseRate: lot.rate,
-          date: lot.date.toISOString().split('T')[0],
+          date: new Date(lot.date).toISOString().split('T')[0],
           totalPurchased: lot.quantity,
           sales: sales.map(s => ({
             customerName: s.customerId?.name || "Unknown",
             quantity: s.quantity,
             rate: s.rate,
-            date: s.date.toISOString().split('T')[0]
+            date: new Date(s.date).toISOString().split('T')[0]
           })),
           remainingStock: remainingStock,
           status
@@ -51,7 +51,7 @@ export async function getDashboardStats() {
     const totalBatchesActive = lotSummaries.filter(l => l.remainingStock > 0).length;
     const totalUnitsInHand = lotSummaries.reduce((acc, l) => acc + (l.remainingStock > 0 ? l.remainingStock : 0), 0);
     const totalShortage = lotSummaries.reduce((acc, l) => acc + (l.remainingStock < 0 ? Math.abs(l.remainingStock) : 0), 0);
-    
+
     // Monetary stats (Secondary)
     const inventoryValue = lotSummaries.reduce((acc, l) => acc + (l.remainingStock > 0 ? l.remainingStock * l.purchaseRate : 0), 0);
     const shortageValue = lotSummaries.reduce((acc, l) => acc + (l.remainingStock < 0 ? Math.abs(l.remainingStock) * l.purchaseRate : 0), 0);
