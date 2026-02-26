@@ -212,7 +212,7 @@ export default function BuyList({
                 ref={fruitSelectRef}
                 required value={formData.productId}
                 onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
                 <option value="">Select Fruit</option>
                 {products.filter(p => p.isActive).map(p => (
@@ -233,7 +233,7 @@ export default function BuyList({
               <select
                 required value={formData.vendorId}
                 onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
                 <option value="">Select Vendor</option>
                 {vendors.filter(v => v.isActive).map(v => (
@@ -249,7 +249,7 @@ export default function BuyList({
               <input
                 type="text" required placeholder="e.g. Batch 1" value={formData.lotName}
                 onChange={(e) => setFormData({ ...formData, lotName: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
@@ -257,7 +257,7 @@ export default function BuyList({
               <input
                 type="date" required value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function BuyList({
               <input
                 type="number" required min="0.0001" step="any" value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
@@ -276,7 +276,7 @@ export default function BuyList({
               <input
                 type="number" required min="0.0001" step="any" value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function BuyList({
               New Purchase Entry
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-8">
+          <CardContent className="p-4 sm:p-8">
             {renderForm(false)}
           </CardContent>
         </Card>

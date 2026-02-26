@@ -432,7 +432,7 @@ export default function SellList({
               New Sale Transaction
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-8">
+          <CardContent className="p-4 sm:p-8">
             {renderForm(false)}
           </CardContent>
         </Card>

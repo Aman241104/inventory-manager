@@ -119,12 +119,12 @@ export default function TransactionManager({
 
         <div className="flex items-center gap-3">
           {!isEntryMode ? (
-            <Button onClick={() => setIsEntryMode(true)} className="gap-2 shadow-indigo-100 shadow-lg w-full md:w-auto justify-center py-6 md:py-2">
+            <Button onClick={() => setIsEntryMode(true)} className="gap-2 shadow-indigo-100 shadow-lg w-full md:w-auto justify-center py-4 md:py-2">
               <Plus size={18} />
               New Entry
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => setIsEntryMode(false)} className="gap-2 w-full md:w-auto justify-center py-6 md:py-2">
+            <Button variant="outline" onClick={() => setIsEntryMode(false)} className="gap-2 w-full md:w-auto justify-center py-4 md:py-2">
               <History size={18} />
               View Today's List
             </Button>
@@ -138,8 +138,8 @@ export default function TransactionManager({
             <button
               onClick={() => setActiveType("buy")}
               className={`flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-black transition-all ${activeType === "buy"
-                  ? "bg-white text-indigo-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                ? "bg-white text-indigo-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
                 }`}
             >
               <ShoppingCart size={18} />
@@ -148,8 +148,8 @@ export default function TransactionManager({
             <button
               onClick={() => setActiveType("sell")}
               className={`flex items-center gap-2 px-8 py-3 rounded-lg text-sm font-black transition-all ${activeType === "sell"
-                  ? "bg-white text-emerald-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
+                ? "bg-white text-emerald-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
                 }`}
             >
               <BadgeDollarSign size={18} />
