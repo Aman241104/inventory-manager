@@ -9,6 +9,8 @@ import Customer from "@/models/Customer";
 import Product from "@/models/Product";
 import { IPurchase, ISale } from "@/types";
 
+import mongoose, { Types } from "mongoose";
+
 /**
  * Adds a purchase. If a purchase for the same product, same date, and same lot name 
  * exists, it combines them (merges into a Lot).
@@ -25,32 +27,33 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
 
     // Find existing purchase for same product, same lot name on the same day
     const existingLot = await Purchase.findOne({
-      productId: data.productId,
+      productId: new mongoose.Types.ObjectId(data.productId),
       lotName: data.lotName,
       date: { $gte: startOfDay, $lte: endOfDay },
       isDeleted: false
     });
 
     if (existingLot) {
-      // Update existing lot (Combine quantity and average the rate or keep last)
-      // Here we add quantity and we'll use the new rate (or we could weighted average)
-      const newQuantity = Number(existingLot.quantity) + Number(data.quantity);
-      
-      existingLot.quantity = newQuantity;
-      existingLot.rate = data.rate; // Update to latest rate
+      existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
+      existingLot.rate = data.rate; 
       existingLot.notes = (existingLot.notes ? existingLot.notes + "; " : "") + (data.notes || "");
-      
       await existingLot.save();
     } else {
-      const purchase = new Purchase(data);
+      const purchase = new Purchase({
+        ...data,
+        productId: new mongoose.Types.ObjectId(data.productId),
+        vendorId: new mongoose.Types.ObjectId(data.vendorId),
+        date: purchaseDate
+      });
       await purchase.save();
     }
 
-    revalidatePath("/buy");
+    revalidatePath("/transactions");
+    revalidatePath("/details");
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Purchase error:", error);
+    console.error("Purchase error detail:", error);
     return { success: false, error: "Failed to record purchase" };
   }
 }
@@ -60,10 +63,16 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
  */
 export async function addSale(data: Partial<ISale> & { date: string | Date }) {
   try {
+    console.log("addSale action received data:", data);
     await connectDB();
     
-    // Calculate total stock for this specific lot
-    const lot = await Purchase.findById(data.purchaseId);
+    if (!data.purchaseId || data.purchaseId === "") {
+        console.error("addSale error: No purchaseId provided");
+        return { success: false, error: "Please select a valid Batch/Lot" };
+    }
+
+    const lotId = new mongoose.Types.ObjectId(data.purchaseId);
+    const lot = await Purchase.findById(lotId);
     if (!lot) return { success: false, error: "Lot not found" };
 
     const previousSales = await Sale.aggregate([
@@ -72,21 +81,29 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
     ]);
 
     const soldSoFar = previousSales[0]?.total || 0;
-    const available = lot.quantity - soldSoFar;
-    const isExtraSold = Number(data.quantity) > available;
+    const currentAvailable = lot.quantity - soldSoFar;
+    
+    // The sale quantity will deplete the currentAvailable
+    const isExtraSold = Number(data.quantity) > currentAvailable;
 
     const sale = new Sale({
       ...data,
+      productId: new mongoose.Types.ObjectId(data.productId),
+      customerId: new mongoose.Types.ObjectId(data.customerId),
+      purchaseId: lotId,
       date: new Date(data.date),
       isExtraSold
     });
     
-    await sale.save();
-    revalidatePath("/sell");
+    const savedSale = await sale.save();
+    
+    revalidatePath("/transactions");
+    revalidatePath("/details");
     revalidatePath("/");
-    return { success: true, isExtraSold };
+    
+    return { success: true, isExtraSold, data: JSON.parse(JSON.stringify(savedSale)) };
   } catch (error) {
-    console.error("Sale error:", error);
+    console.error("Sale error detail:", error);
     return { success: false, error: "Failed to record sale" };
   }
 }
@@ -138,8 +155,77 @@ export async function getLotsForProduct(productId: string) {
         await connectDB();
         const lots = await Purchase.find({ productId, isDeleted: false })
             .sort({ date: -1 });
-        return { success: true, data: JSON.parse(JSON.stringify(lots)) };
+            
+        const lotsWithAvailable = await Promise.all(lots.map(async (lot) => {
+            const sales = await Sale.aggregate([
+                { $match: { purchaseId: lot._id, isDeleted: false } },
+                { $group: { _id: null, total: { $sum: "$quantity" } } }
+            ]);
+            const soldSoFar = sales[0]?.total || 0;
+            return {
+                ...lot.toObject(),
+                _id: lot._id.toString(),
+                availableQty: lot.quantity - soldSoFar
+            };
+        }));
+            
+        return { success: true, data: JSON.parse(JSON.stringify(lotsWithAvailable)) };
     } catch (error) {
         return { success: false, error: "Failed to fetch lots" };
     }
+}
+
+export async function getPurchases(fromDate?: string, toDate?: string) {
+  try {
+    await connectDB();
+    const query: any = { isDeleted: false };
+    if (fromDate || toDate) {
+      query.date = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        query.date.$gte = start;
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        query.date.$lte = end;
+      }
+    }
+    const purchases = await Purchase.find(query)
+      .populate("productId", "name unitType")
+      .populate("vendorId", "name")
+      .sort({ date: -1 });
+    return { success: true, data: JSON.parse(JSON.stringify(purchases)) };
+  } catch (error) {
+    return { success: false, error: "Failed to fetch purchases" };
+  }
+}
+
+export async function getSales(fromDate?: string, toDate?: string) {
+  try {
+    await connectDB();
+    const query: any = { isDeleted: false };
+    if (fromDate || toDate) {
+      query.date = {};
+      if (fromDate) {
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        query.date.$gte = start;
+      }
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+        query.date.$lte = end;
+      }
+    }
+    const sales = await Sale.find(query)
+      .populate("productId", "name unitType")
+      .populate("customerId", "name")
+      .populate("purchaseId", "lotName")
+      .sort({ date: -1 });
+    return { success: true, data: JSON.parse(JSON.stringify(sales)) };
+  } catch (error) {
+    return { success: false, error: "Failed to fetch sales" };
+  }
 }

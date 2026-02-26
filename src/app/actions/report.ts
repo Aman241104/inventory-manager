@@ -11,10 +11,10 @@ import { revalidatePath } from "next/cache";
 export async function deleteLot(id: string) {
   try {
     await connectDB();
-    // Delete the lot
-    await Purchase.findByIdAndDelete(id);
-    // Also delete associated sales to maintain integrity
-    await Sale.deleteMany({ purchaseId: id });
+    // Soft delete the lot
+    await Purchase.findByIdAndUpdate(id, { isDeleted: true });
+    // Also soft delete associated sales
+    await Sale.updateMany({ purchaseId: id }, { isDeleted: true });
     revalidatePath("/details");
     revalidatePath("/");
     return { success: true };
@@ -26,7 +26,8 @@ export async function deleteLot(id: string) {
 export async function deleteSale(id: string) {
   try {
     await connectDB();
-    await Sale.findByIdAndDelete(id);
+    // Soft delete the sale
+    await Sale.findByIdAndUpdate(id, { isDeleted: true });
     revalidatePath("/details");
     revalidatePath("/");
     return { success: true };

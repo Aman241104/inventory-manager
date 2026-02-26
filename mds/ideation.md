@@ -178,9 +178,93 @@ Instead of adding new features, we focus on making the current ones work harder.
 
 ---
 
-## 15. Summary of "Simple & Better"
+## 17. Phase 4: Data Quality & "Zero-Error" Validation
 
-1.  **Dashboard**: Better visual cues (Progress pills, Perishability icons).
-2.  **Transactions**: Faster workflow (Smart dropdowns, FIFO auto-select).
-3.  **Details**: Audit-ready (Running balances, popover contacts).
-4.  **Master Data**: Contextual info (Active lot counts, last trade dates).
+In a fast-paced market, typos are common. The system should act as a safety net.
+
+### 17.1 Logical "Rate Guards"
+- **High/Low Alert**: If a user enters a Selling Rate that is 50% higher or lower than the average for that product today, show a subtle "Are you sure?" warning.
+    - *Why*: Prevents entering ₹60 instead of ₹600.
+- **Profit-Floor (Subtle)**: If the selling rate is lower than the purchase rate of the selected Lot, highlight the rate in **Rose** text. It doesn't block the save, but it makes the user double-check.
+
+### 17.2 "Ghost" Input Previews
+- While typing the quantity, show a "Ghost" number in the background of the stock status indicating the *new* total.
+- **Dynamic Unit Conversion**: If a Lot is in "Boxes" but the user wants to sell in "Kgs" (if we ever support mixed units), show the conversion in real-time.
+
+### 17.3 The "Review Before Commit"
+- For large transactions (e.g., Qty > 100), show a 1-second "Slide to Confirm" instead of a simple click to prevent accidental bulk errors.
+
+---
+
+## 18. Phase 5: The "Daily Close" Workflow
+
+Tr traders usually "close their books" at the end of the day.
+
+### 18.1 The "Today's Ledger" Summary
+- A specialized view (or a toggle on the Dashboard) that shows ONLY today's transactions.
+- **The "Missing Sales" Check**: A list of all Lots that were touched today but haven't been "Balanced" (sold out). It asks: *“You still have 5 units of Kiwi from today's batch. Did you forget to record a sale?”*
+
+### 18.2 Snapshot Feature
+- At the end of the day, allow the user to "Lock" the day. This prevents accidental edits to previous dates, ensuring that yesterday's "Balanced" lots stay balanced.
+
+---
+
+## 19. Visual Identity: The "Freshness" UI Language
+
+To make the app feel "Professional but Fresh" like the fruit it manages:
+
+- **Vibrant Slate Palette**: Use deep Slate-900 for structure, but use high-saturation Emerald, Amber, and Rose for data points.
+- **Subtle Motion**:
+    - When a new transaction is added, the row should "Slide Down" into the list.
+    - When a lot is "Balanced" (0 stock), it should have a subtle green glow for a few seconds.
+- **Micro-Icons**:
+    - Use fruit-specific glyphs (🍎, 🥭, 🍇) in the background of cards to make it visually distinct from a standard accounting app.
+
+---
+
+## 22. Phase 7: The "Lean & Fast" Quantity-First UI
+
+Based on client feedback, the system is shifting from an "Accounting" feel to a pure "Physical Inventory Tracking" feel. Financial data (Rate, Total, Investment) remains in the system but is demoted to **Secondary Details** to keep the interface fast and focused.
+
+### 22.1 "Quantity-First" Visual Hierarchy
+- **Primary Focus**: Large, bold numbers for `Quantities` and `Balances`.
+- **Secondary Details**: Financial data (Rates/Totals) moved to:
+    - Small grey sub-text under quantities.
+    - Tooltips or "Info" icons.
+    - Hidden by default in high-speed entry, appearing only after a value is entered.
+
+### 22.2 High-Speed Transaction Hub (Redesign)
+- **Inline Row Entries**: Instead of large dedicated blocks for "Investment" or "Total Value," show them as a single line of summary text: `Total: ₹5,000 (@ ₹50/unit)`.
+- **Keyboard-Centric Input**:
+    - Focus remains on the `Quantity` field.
+    - `Rate` field is reduced in size or placed adjacent to Quantity to minimize eye travel.
+    - Pressing `Enter` in the Quantity field should trigger "Save & Add Another" by default.
+
+### 22.3 Dashboard: Quantitative Summaries
+- **The "Big Three" Cards**:
+    1. `Active Batches` (Count)
+    2. `Units in Hand` (Qty)
+    3. `Shortage Units` (Qty)
+- **Subtle Financial Pulse**: A tiny line at the bottom of these cards can show the `(₹ Value)` in a small, low-contrast font for those who still want to see it occasionally.
+
+### 22.4 Detailed Report: The "Quantity Flow" Ledger
+- **Movement-First Layout**:
+    - Columns: `Date` | `Fruit/Lot` | `Purchased` | `Sales History` | `Current Balance`.
+    - **Demoted Money**: The purchase rate and sale rates are shown in parenthesis next to the quantities (e.g., `100 (₹500)`).
+- **Balance Highlight**: The `Current Balance` column uses the largest font on the page.
+
+### 22.5 "Clean Air" Aesthetics
+- **Whitespace over Borders**: Increase padding between rows to allow the eye to scan quantities faster.
+- **Color-Coded Quantities**: 
+    - `+85` (Amber for remaining).
+    - `-10` (Rose for shortage).
+    - `0` (Emerald for balanced).
+
+---
+
+## 23. Summary of the "Lean" Shift
+
+1.  **Dashboard**: Quantitative dominance, subtle financial sub-text.
+2.  **Transactions**: High-speed entry with minimal visual friction.
+3.  **Details**: Clean horizontal ledger focused on unit movement.
+4.  **Aesthetics**: High-contrast quantities, minimalist secondary data.

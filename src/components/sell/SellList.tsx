@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, AlertTriangle, CheckCircle2, Calendar, Filter, X, UserPlus, TrendingUp, Apple } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Calendar, Filter, X, UserPlus, TrendingUp, Apple, History, BadgeDollarSign } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
@@ -11,11 +11,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 export default function SellList({
   initialSales,
   products: initialProducts,
-  customers: initialCustomers
+  customers: initialCustomers,
+  isInline = false,
+  onSuccess
 }: {
   initialSales: any[],
   products: any[],
-  customers: any[]
+  customers: any[],
+  isInline?: boolean,
+  onSuccess?: () => void
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,6 +49,22 @@ export default function SellList({
 
   const [newCustomer, setNewCustomer] = useState({ name: "", contact: "" });
   const [newProduct, setNewProduct] = useState({ name: "", unitType: "Box" });
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const fruitSelectRef = React.useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(""), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (isModalOpen || isInline) {
+      fruitSelectRef.current?.focus();
+    }
+  }, [isModalOpen, isInline]);
 
   const handleApplyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -69,11 +89,9 @@ export default function SellList({
           setAvailableLots(res.data);
           // FIFO: Auto-select oldest lot if none selected
           if (!formData.purchaseId && res.data.length > 0) {
-            // Data is already sorted by date descending in action, oldest is last
             const oldest = res.data[res.data.length - 1];
             setFormData(prev => ({ ...prev, purchaseId: oldest._id }));
           }
-          // If editing or pre-selected, find that lot
           if (formData.purchaseId) {
              const lot = res.data.find((l: any) => l._id === formData.purchaseId);
              setSelectedLot(lot || null);
@@ -84,7 +102,7 @@ export default function SellList({
       setAvailableLots([]);
       setSelectedLot(null);
     }
-  }, [formData.productId]); // Removed formData.purchaseId to prevent loop during FIFO select
+  }, [formData.productId]);
 
   // Update selected lot details when purchaseId changes
   useEffect(() => {
@@ -99,29 +117,49 @@ export default function SellList({
     return Math.floor(diff / (1000 * 60 * 60 * 24));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent | null, addAnother = false) => {
+    if (e) e.preventDefault();
+    console.log("Submitting sale data:", formData);
     setLoading(true);
-    const result = await addSale({
-      ...formData,
-      quantity: Number(formData.quantity),
-      rate: Number(formData.rate)
-    });
-    if (result.success) {
-      setIsModalOpen(false);
-      setFormData({
-        productId: "",
-        customerId: "",
-        purchaseId: "",
-        quantity: "",
-        rate: "",
-        date: new Date().toISOString().split('T')[0],
-        notes: ""
+    try {
+      const result = await addSale({
+        ...formData,
+        quantity: Number(formData.quantity),
+        rate: Number(formData.rate)
       });
-      router.refresh();
-      setTimeout(() => window.location.reload(), 500);
+      console.log("Sale submission result:", result);
+      if (result.success) {
+        setSuccessMessage("Sale recorded successfully!");
+        if (!addAnother) {
+          setIsModalOpen(false);
+        }
+        setFormData({
+          productId: addAnother ? formData.productId : "",
+          customerId: addAnother ? formData.customerId : "",
+          purchaseId: addAnother ? formData.purchaseId : "",
+          quantity: "",
+          rate: "",
+          date: new Date().toISOString().split('T')[0],
+          notes: ""
+        });
+        router.refresh();
+        if (onSuccess) onSuccess();
+        if (!addAnother) {
+            if (!isInline) setTimeout(() => window.location.reload(), 500);
+            else router.refresh();
+        } else {
+            getLotsForProduct(formData.productId).then(res => {
+                if (res.success) setAvailableLots(res.data);
+            });
+        }
+      } else {
+        alert(result.error || "Failed to save sale");
+      }
+    } catch (err) {
+      console.error("HandleSubmit error:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleQuickAddCustomer = async (e: React.FormEvent) => {
@@ -150,23 +188,270 @@ export default function SellList({
     setLoading(false);
   };
 
-  const isExtraSold = selectedLot && Number(formData.quantity) > selectedLot.quantity;
+  const isExtraSold = selectedLot && Number(formData.quantity) > selectedLot.availableQty;
+
+  const renderForm = (isModal = true) => (
+    <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
+      {successMessage && (
+        <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl flex items-center gap-2 animate-bounce">
+          <CheckCircle2 size={18} />
+          <span className="font-bold text-sm">{successMessage}</span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Form Fields Column */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
+                Fruit
+                <button type="button" onClick={() => setIsProductModalOpen(true)} className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold">
+                  <Apple size={10} /> Quick Add
+                </button>
+              </label>
+              <select
+                ref={fruitSelectRef}
+                required value={formData.productId}
+                onChange={(e) => setFormData({ ...formData, productId: e.target.value, purchaseId: "" })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              >
+                <option value="">Select Fruit</option>
+                {products.filter(p => p.isActive).map(p => (
+                  <option key={p._id} value={p._id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
+                Customer
+                <button type="button" onClick={() => setIsCustomerModalOpen(true)} className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold">
+                  <UserPlus size={10} /> Quick Add
+                </button>
+              </label>
+              <select
+                required value={formData.customerId}
+                onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              >
+                <option value="">Select Customer</option>
+                {customers.filter(c => c.isActive).map(c => (
+                  <option key={c._id} value={c._id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Select Batch (Lot) *</label>
+            <select
+              required
+              value={formData.purchaseId}
+              disabled={!formData.productId}
+              onChange={(e) => setFormData({ ...formData, purchaseId: e.target.value })}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-50"
+            >
+              <option value="">{formData.productId ? "Choose a lot..." : "Select product first"}</option>
+              {availableLots.map(lot => {
+                const age = calculateAge(lot.date);
+                return (
+                  <option key={lot._id} value={lot._id}>
+                    {lot.lotName} (Stock: {lot.availableQty} | ₹{lot.rate} | {age === 0 ? 'Fresh' : `${age}d old`})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantity</label>
+              <input
+                type="number" required min="0.0001" step="any" value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${
+                  isExtraSold ? "border-rose-300 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
+                }`}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Selling Rate</label>
+              <input
+                type="number" required min="0.0001" step="any" value={formData.rate}
+                onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
+                className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${
+                  selectedLot && Number(formData.rate) > 0 && Number(formData.rate) < selectedLot.rate 
+                    ? "border-rose-300 text-rose-600 focus:ring-rose-500" 
+                    : "border-slate-200 focus:ring-indigo-500"
+                }`}
+              />
+              {selectedLot && Number(formData.rate) > 0 && Number(formData.rate) < selectedLot.rate && (
+                <p className="text-[10px] text-rose-500 mt-1 font-bold flex items-center gap-1">
+                  <AlertTriangle size={10} /> Below buy price (₹{selectedLot.rate})
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sale Date</label>
+            <input
+              type="date" required value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Context Panel Column */}
+        <div className="flex flex-col gap-4">
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lot Summary</h4>
+          {selectedLot ? (
+            <div className="flex-1 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 flex flex-col justify-between animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-2xl font-black text-indigo-900">{selectedLot.lotName}</div>
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Selected Batch</p>
+                  </div>
+                  <div className="bg-white/80 px-2 py-1 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs">
+                    ₹{selectedLot.rate} <span className="text-[8px] opacity-50">BUY RATE</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/60 p-3 rounded-xl border border-indigo-100/50">
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Original</div>
+                    <div className="text-lg font-bold text-slate-700">{selectedLot.quantity}</div>
+                  </div>
+                  <div className="bg-white/60 p-3 rounded-xl border border-indigo-100/50">
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Available</div>
+                    <div className="text-lg font-bold text-indigo-600">{selectedLot.availableQty}</div>
+                  </div>
+                </div>
+
+                {/* Pulse Bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock Pulse</span>
+                    <span className={`text-xs font-bold ${selectedLot.availableQty - (Number(formData.quantity) || 0) < 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                      {selectedLot.availableQty - (Number(formData.quantity) || 0)} Units Remaining
+                    </span>
+                  </div>
+                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden flex shadow-inner">
+                    <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.max(0, ((selectedLot.availableQty - (Number(formData.quantity) || 0)) / selectedLot.quantity) * 100)}%` }} />
+                    <div className="h-full bg-indigo-400 transition-all duration-500 opacity-80" style={{ width: `${Math.min(100, (Number(formData.quantity) || 0) / selectedLot.quantity * 100)}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-indigo-100/50 mt-auto">
+                <div className="flex flex-col items-end text-indigo-900">
+                  <div className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Transaction Summary</div>
+                  <div className="text-sm font-bold">
+                    <span className="text-indigo-600 font-black">{formData.quantity || 0}</span> Units Sold 
+                    <span className="mx-2 opacity-20">|</span> 
+                    <span className="opacity-60 font-medium italic">₹{((Number(formData.quantity) || 0) * (Number(formData.rate) || 0)).toLocaleString()} Total</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center p-8 text-center text-slate-300">
+              <TrendingUp size={48} className="mb-4 opacity-20" />
+              <p className="text-sm font-medium">Select a lot to see real-time<br/>stock pulse and valuations.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
+        <Button type="button" variant="ghost" onClick={() => isModal ? setIsModalOpen(false) : router.push('/transactions')}>Cancel</Button>
+        <Button type="button" variant="outline" disabled={loading} onClick={(e) => handleSubmit(e, true)} className="border-indigo-200 text-indigo-600">
+          {loading ? "..." : "Save & Add Another"}
+        </Button>
+        <Button type="submit" variant={isExtraSold ? "danger" : "primary"} disabled={loading} className="px-10">
+          {loading ? "Saving..." : "Save Transaction"}
+        </Button>
+      </div>
+    </form>
+  );
+
+  if (isInline) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-none shadow-xl shadow-indigo-100/50 rounded-3xl overflow-hidden">
+          <CardHeader className="bg-slate-900 text-white py-6">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BadgeDollarSign size={20} className="text-emerald-400" />
+              New Sale Transaction
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-8">
+            {renderForm(false)}
+          </CardContent>
+        </Card>
+        
+        {/* Modals for Quick Add within Inline Mode */}
+        {/* Quick Add Product Modal */}
+        <Modal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} title="Quick Add Product">
+          <form onSubmit={handleQuickAddProduct} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+              <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Unit Type</label>
+              <select value={newProduct.unitType} onChange={(e) => setNewProduct({...newProduct, unitType: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="Box">Box</option>
+                <option value="Kg">Kg</option>
+                <option value="Lot">Lot</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsProductModalOpen(false)}>Back</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Adding..." : "Add Product"}</Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Quick Add Customer Modal */}
+        <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title="Quick Add Customer">
+          <form onSubmit={handleQuickAddCustomer} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Customer Name</label>
+              <input type="text" required value={newCustomer.name} onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Contact Info</label>
+              <input type="text" required value={newCustomer.contact} onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsCustomerModalOpen(false)}>Back</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Adding..." : "Add Customer"}</Button>
+            </div>
+          </form>
+        </Modal>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center no-print">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Sell Section</h1>
-          <p className="text-slate-500">Record sales from specific fruit lots.</p>
+      {!isInline && (
+        <div className="flex justify-between items-center no-print">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Sell Section</h1>
+            <p className="text-slate-500">Record sales from specific fruit lots.</p>
+          </div>
+          <Button onClick={() => setIsModalOpen(true)} variant="secondary" className="flex items-center gap-2">
+            <Plus size={18} />
+            Record Sale
+          </Button>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} variant="secondary" className="flex items-center gap-2">
-          <Plus size={18} />
-          Record Sale
-        </Button>
-      </div>
+      )}
 
-      {/* Filter Section - only if history exists */}
-      {initialSales.length > 0 && (
+      {/* Filter Section */}
+      {!isInline && initialSales.length > 0 && (
         <Card className="bg-slate-50/50 border-dashed no-print">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row items-end gap-4">
@@ -174,24 +459,14 @@ export default function SellList({
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">From Date</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
               </div>
               <div className="flex-1 space-y-1">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">To Date</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
               </div>
               <div className="flex gap-2">
@@ -265,136 +540,19 @@ export default function SellList({
 
       {/* Record Sale Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Record New Sale">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex justify-between">
-                Product
-                <button 
-                  type="button" onClick={() => setIsProductModalOpen(true)}
-                  className="text-emerald-600 hover:text-emerald-800 flex items-center gap-1 text-[10px] font-bold uppercase"
-                >
-                  <Apple size={12} /> Quick Add
-                </button>
-              </label>
-              <select
-                required value={formData.productId}
-                onChange={(e) => setFormData({ ...formData, productId: e.target.value, purchaseId: "" })}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Select Product</option>
-                {products.filter(p => p.isActive).map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex justify-between">
-                Customer
-                <button 
-                  type="button" onClick={() => setIsCustomerModalOpen(true)}
-                  className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-[10px] font-bold uppercase"
-                >
-                  <UserPlus size={12} /> Quick Add
-                </button>
-              </label>
-              <select
-                required value={formData.customerId}
-                onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Select Customer</option>
-                {customers.filter(c => c.isActive).map(c => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Select Lot / Batch</label>
-            <select
-              required value={formData.purchaseId}
-              disabled={!formData.productId}
-              onChange={(e) => setFormData({ ...formData, purchaseId: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
-            >
-              <option value="">{formData.productId ? "Select Batch" : "Select Product First"}</option>
-              {availableLots.map(lot => {
-                const age = calculateAge(lot.date);
-                return (
-                  <option key={lot._id} value={lot._id}>
-                    {lot.lotName} (Stock: {lot.quantity} | ₹{lot.rate} | {age === 0 ? 'Fresh' : `${age}d old`})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          {selectedLot && (
-            <div className="p-3 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-between text-xs font-bold uppercase">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={14} />
-                Lot Original Qty: {selectedLot.quantity}
-              </div>
-              <div>Rate: ₹{selectedLot.rate}</div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
-              <input
-                type="number" required min="0.0001" step="any" value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 ${isExtraSold ? "border-rose-300 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
-                  }`}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Selling Rate</label>
-              <input
-                type="number" required min="0.0001" step="any" value={formData.rate}
-                onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Sale Date</label>
-            <input
-              type="date" required value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" variant={isExtraSold ? "danger" : "secondary"} disabled={loading}>
-              {loading ? "Saving..." : "Save Sale"}
-            </Button>
-          </div>
-        </form>
+        {renderForm(true)}
       </Modal>
 
-      {/* Quick Add Product Modal */}
+      {/* Product & Customer Modals for Modal Mode */}
       <Modal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} title="Quick Add Product">
         <form onSubmit={handleQuickAddProduct} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
-            <input 
-              type="text" required value={newProduct.name}
-              onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Unit Type</label>
-            <select 
-              value={newProduct.unitType}
-              onChange={(e) => setNewProduct({...newProduct, unitType: e.target.value})}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
+            <select value={newProduct.unitType} onChange={(e) => setNewProduct({...newProduct, unitType: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="Box">Box</option>
               <option value="Kg">Kg</option>
               <option value="Lot">Lot</option>
@@ -407,24 +565,15 @@ export default function SellList({
         </form>
       </Modal>
 
-      {/* Quick Add Customer Modal */}
       <Modal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)} title="Quick Add Customer">
         <form onSubmit={handleQuickAddCustomer} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Customer Name</label>
-            <input 
-              type="text" required value={newCustomer.name}
-              onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <input type="text" required value={newCustomer.name} onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Contact Info</label>
-            <input 
-              type="text" required value={newCustomer.contact}
-              onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})}
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <input type="text" required value={newCustomer.contact} onChange={(e) => setNewCustomer({...newCustomer, contact: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => setIsCustomerModalOpen(false)}>Back</Button>

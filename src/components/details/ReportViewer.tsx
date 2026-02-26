@@ -18,11 +18,13 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getDetailedReport, deleteLot, deleteSale } from "@/app/actions/report";
+import LedgerCard from "./LedgerCard";
 
 export default function ReportViewer({ products }: { products: any[] }) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'table' | 'ledger'>('table');
   
   const [filters, setFilters] = useState({
     fromDate: "",
@@ -76,8 +78,8 @@ export default function ReportViewer({ products }: { products: any[] }) {
       {/* Filter Bar */}
       <Card className="bg-white shadow-sm border-slate-200 no-print">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="space-y-1">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div className="space-y-1 md:col-span-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Product</label>
               <select 
                 value={filters.productId}
@@ -90,7 +92,7 @@ export default function ReportViewer({ products }: { products: any[] }) {
                 ))}
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 md:col-span-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">From Date</label>
               <input 
                 type="date" 
@@ -99,7 +101,7 @@ export default function ReportViewer({ products }: { products: any[] }) {
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 md:col-span-3">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">To Date</label>
               <input 
                 type="date" 
@@ -108,10 +110,28 @@ export default function ReportViewer({ products }: { products: any[] }) {
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 md:col-span-3">
               <Button onClick={fetchReport} className="flex-1" disabled={loading}>
-                {loading ? "Loading..." : "Filter"}
+                {loading ? "..." : "Filter"}
               </Button>
+              
+              <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                <button 
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-2 text-sm font-bold transition-colors ${viewMode === 'table' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+                  title="Table View"
+                >
+                  Table
+                </button>
+                <button 
+                  onClick={() => setViewMode('ledger')}
+                  className={`px-3 py-2 text-sm font-bold transition-colors ${viewMode === 'ledger' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+                  title="Ledger Print View"
+                >
+                  Ledger
+                </button>
+              </div>
+
               <Button variant="outline" onClick={handlePrint}>
                 <Printer size={18} />
               </Button>
@@ -120,54 +140,60 @@ export default function ReportViewer({ products }: { products: any[] }) {
         </CardContent>
       </Card>
 
-      {/* Report Table */}
-      <Card className="print:shadow-none print:border-none">
-        <CardContent className="p-0">
+      {/* Conditional Rendering based on View Mode */}
+      {viewMode === 'table' ? (
+        <Card className="print:shadow-none print:border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden border-slate-100">
+          <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-900 text-white">
-                  <th className="px-4 py-4 text-xs font-bold uppercase border-r border-slate-700">Lot Info</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase border-r border-slate-700">Vendor</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase border-r border-slate-700 text-right">Qty</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase border-r border-slate-700 text-right">Rate</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase border-r border-slate-700 text-right">Total</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase border-r border-slate-700 text-right">Sold</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase text-right">Balance</th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase text-center no-print">Action</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700">Lot Identification</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700">Vendor</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700 text-right">In Qty</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700 text-right">Out Qty</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-right">Current Balance</th>
+                  <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-center no-print">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 bg-white">
                 {data.map((row) => (
                   <React.Fragment key={row.lotId}>
                     <tr 
                       className="hover:bg-slate-50 transition-colors cursor-pointer group"
                       onClick={() => toggleLot(row.lotId)}
                     >
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-3">
                           <div className="p-1 rounded bg-slate-100 group-hover:bg-white no-print">
                             {expandedLots.has(row.lotId) ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-800">{row.productName}</div>
+                            <div className="font-black text-slate-800 uppercase tracking-tight">{row.productName}</div>
                             <div className="text-[10px] text-indigo-600 font-black uppercase">{row.lotName} • {row.date}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{row.vendorName}</td>
-                      <td className="px-4 py-4 text-sm font-bold text-slate-700 text-right">{row.purchasedQty} <span className="text-[10px] text-slate-400">{row.unitType}</span></td>
-                      <td className="px-4 py-4 text-sm text-slate-600 text-right">₹{row.purchasedRate}</td>
-                      <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{row.purchasedTotal}</td>
-                      <td className="px-4 py-4 text-sm font-bold text-indigo-600 text-right">
-                        {row.totalSoldQty}
+                      <td className="px-4 py-5 text-xs font-bold text-slate-500 uppercase tracking-tighter">{row.vendorName}</td>
+                      <td className="px-4 py-5 text-right">
+                        <div className="text-sm font-black text-slate-700">{row.purchasedQty}</div>
+                        <div className="text-[10px] font-medium text-slate-400 italic">@ ₹{row.purchasedRate}</div>
                       </td>
-                      <td className={`px-4 py-4 text-sm font-black text-right ${
-                        row.remainingQty > 0 ? "text-amber-600" : row.remainingQty < 0 ? "text-rose-600" : "text-emerald-600"
+                      <td className="px-4 py-5 text-right">
+                        <div className="text-sm font-black text-indigo-600">{row.totalSoldQty}</div>
+                        <div className="text-[10px] font-medium text-slate-300 italic uppercase">Units Sold</div>
+                      </td>
+                      <td className={`px-4 py-5 text-right ${
+                        row.remainingQty > 0 ? "bg-amber-50/20" : row.remainingQty < 0 ? "bg-rose-50/20" : "bg-emerald-50/20"
                       }`}>
-                        {row.remainingQty > 0 ? `+${row.remainingQty}` : row.remainingQty}
+                        <div className={`text-xl font-black tracking-tighter ${
+                          row.remainingQty > 0 ? "text-amber-600" : row.remainingQty < 0 ? "text-rose-600" : "text-emerald-600"
+                        }`}>
+                          {row.remainingQty > 0 ? `+${row.remainingQty}` : row.remainingQty}
+                        </div>
+                        <div className="text-[9px] font-black uppercase text-slate-400">Current Stock</div>
                       </td>
-                      <td className="px-4 py-4 text-center no-print">
+                      <td className="px-4 py-5 text-center no-print">
                         <button 
                           onClick={(e) => handleDeleteLot(e, row.lotId)}
                           className="p-1.5 text-slate-300 hover:text-rose-600 transition-colors"
@@ -180,23 +206,22 @@ export default function ReportViewer({ products }: { products: any[] }) {
                     {/* Expanded Sales Data */}
                     {expandedLots.has(row.lotId) && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={8} className="px-8 py-4">
-                          <div className="border-l-4 border-indigo-200 pl-4 space-y-3">
-                            <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                        <td colSpan={6} className="px-8 py-6">
+                          <div className="border-l-4 border-indigo-200 pl-6 space-y-4">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                               <TrendingDown size={14} className="text-indigo-400" />
-                              Sales Transactions for this Lot
+                              Physical Units Outflow Ledger
                             </h4>
                             {row.sales.length > 0 ? (
                               <table className="w-full text-xs">
                                 <thead>
-                                  <tr className="text-slate-400 border-b border-slate-200">
-                                    <th className="py-2 text-left">Date</th>
-                                    <th className="py-2 text-left">Customer</th>
-                                    <th className="py-2 text-right">Qty</th>
-                                    <th className="py-2 text-right">Rate</th>
-                                    <th className="py-2 text-right">Total</th>
-                                    <th className="py-2 text-right">Balance</th>
-                                    <th className="py-2 text-center no-print">Del</th>
+                                  <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">
+                                    <th className="py-3 text-left">Date</th>
+                                    <th className="py-3 text-left">Buyer (Customer)</th>
+                                    <th className="py-3 text-right">Sold Qty</th>
+                                    <th className="py-3 text-right font-medium text-slate-300 italic uppercase">Rate</th>
+                                    <th className="py-3 text-right">Running Balance</th>
+                                    <th className="py-3 text-center no-print">Del</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -205,17 +230,16 @@ export default function ReportViewer({ products }: { products: any[] }) {
                                     return row.sales.map((s: any) => {
                                       runningBal -= s.quantity;
                                       return (
-                                        <tr key={s.saleId} className="border-b border-slate-100 last:border-0">
-                                          <td className="py-2">{s.date}</td>
-                                          <td className="py-2 font-medium">{s.customerName}</td>
-                                          <td className="py-2 text-right font-bold">{s.quantity}</td>
-                                          <td className="py-2 text-right">₹{s.rate}</td>
-                                          <td className="py-2 text-right font-bold text-slate-700">₹{s.total}</td>
-                                          <td className="py-2 text-right font-mono text-slate-400">{runningBal}</td>
-                                          <td className="py-2 text-center no-print">
+                                        <tr key={s.saleId} className="border-b border-slate-100 last:border-0 hover:bg-white/50 transition-colors">
+                                          <td className="py-3 font-medium text-slate-500">{s.date}</td>
+                                          <td className="py-3 font-black text-slate-700 uppercase tracking-tight">{s.customerName}</td>
+                                          <td className="py-3 text-right font-black text-indigo-600 text-sm">{s.quantity}</td>
+                                          <td className="py-3 text-right text-slate-300 italic font-medium">₹{s.rate}</td>
+                                          <td className="py-3 text-right font-mono font-bold text-slate-400">{runningBal}</td>
+                                          <td className="py-3 text-center no-print">
                                             <button 
                                               onClick={() => handleDeleteSale(s.saleId)}
-                                              className="text-slate-300 hover:text-rose-500"
+                                              className="p-1 text-slate-300 hover:text-rose-500 transition-colors"
                                             >
                                               <X size={14} />
                                             </button>
@@ -227,7 +251,7 @@ export default function ReportViewer({ products }: { products: any[] }) {
                                 </tbody>
                               </table>
                             ) : (
-                              <div className="text-slate-400 italic text-xs py-2">No sales recorded yet for this batch.</div>
+                              <div className="text-slate-400 italic text-xs py-4 px-2 bg-white/50 rounded-xl border border-dashed border-slate-200">No units have left this batch yet.</div>
                             )}
                           </div>
                         </td>
@@ -237,7 +261,7 @@ export default function ReportViewer({ products }: { products: any[] }) {
                 ))}
                 {data.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-20 text-center text-slate-400 italic">
+                    <td colSpan={6} className="px-4 py-20 text-center text-slate-400 italic font-medium">
                       No matching records found for the selected filters.
                     </td>
                   </tr>
@@ -247,6 +271,19 @@ export default function ReportViewer({ products }: { products: any[] }) {
           </div>
         </CardContent>
       </Card>
+      ) : (
+        <div className="space-y-8">
+          {data.length === 0 ? (
+            <div className="text-center text-slate-400 italic p-12 bg-slate-50 rounded-xl">
+              No matching records found for the selected filters to generate ledgers.
+            </div>
+          ) : (
+            data.map((row) => (
+              <LedgerCard key={row.lotId} data={row} />
+            ))
+          )}
+        </div>
+      )}
       
       {/* Print Only Footer */}
       <div className="hidden print:block fixed bottom-0 left-0 right-0 p-4 border-t text-center text-[10px] text-slate-400">

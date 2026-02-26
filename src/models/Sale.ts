@@ -18,9 +18,12 @@ const SaleSchema = new Schema<ISale>(
 );
 
 // Middleware to calculate totalAmount before saving
-SaleSchema.pre('save', function() {
+SaleSchema.pre('save', function () {
   this.totalAmount = this.quantity * this.rate;
 });
 
-const Sale = models.Sale || model<ISale>('Sale', SaleSchema);
+if (mongoose.models.Sale) {
+  delete mongoose.models.Sale;
+}
+const Sale = model<ISale>('Sale', SaleSchema);
 export default Sale;

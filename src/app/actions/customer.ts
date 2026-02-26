@@ -64,7 +64,7 @@ export async function deleteCustomer(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
-    await Customer.findByIdAndDelete(id);
+    await Customer.findByIdAndUpdate(id, { isActive: false });
     revalidatePath("/customers");
     return { success: true };
   } catch (error) {

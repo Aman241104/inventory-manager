@@ -59,11 +59,13 @@ export interface ILotSummary {
   productName: string;
   unitType: string;
   lotName: string;
+  purchaseRate: number;
   date: string;
   totalPurchased: number;
   sales: {
     customerName: string;
     quantity: number;
+    rate: number;
     date: string;
   }[];
   remainingStock: number;

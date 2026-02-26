@@ -61,7 +61,7 @@ export async function deleteVendor(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
-    await Vendor.findByIdAndDelete(id);
+    await Vendor.findByIdAndUpdate(id, { isActive: false });
     revalidatePath("/vendors");
     return { success: true };
   } catch (error) {

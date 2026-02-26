@@ -76,7 +76,7 @@ export async function deleteProduct(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
-    await Product.findByIdAndDelete(id);
+    await Product.findByIdAndUpdate(id, { isActive: false });
     revalidatePath("/products");
     return { success: true };
   } catch (error) {

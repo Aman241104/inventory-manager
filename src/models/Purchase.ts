@@ -17,9 +17,12 @@ const PurchaseSchema = new Schema<IPurchase>(
 );
 
 // Middleware to calculate totalAmount before saving
-PurchaseSchema.pre('save', function() {
+PurchaseSchema.pre('save', function () {
   this.totalAmount = this.quantity * this.rate;
 });
 
-const Purchase = models.Purchase || model<IPurchase>('Purchase', PurchaseSchema);
+if (mongoose.models.Purchase) {
+  delete mongoose.models.Purchase;
+}
+const Purchase = model<IPurchase>('Purchase', PurchaseSchema);
 export default Purchase;

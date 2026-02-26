@@ -1,22 +1,20 @@
-# Inventory Management System – Project Plan
+# Inventory Management System – Project Plan (Revised)
 
 ## 1. Project Overview
 
-Build a web-based Inventory Management System for a fruit trading business.
+Build a web-based Inventory Management System for a fruit trading business, focused on **Batch (Lot) Tracking** and **T-Ledger Printing**.
 
 The system must allow:
-- Tracking of purchases (Buy Section)
-- Tracking of sales (Sell Section)
-- Product management
-- Real-time stock validation
-- Summary dashboard
+- Tracking of purchases (Incoming Batches)
+- Tracking of sales (Outgoing per Batch)
+- Product, Vendor, and Customer management
+- Real-time stock validation per batch
+- **Custom T-Ledger PDF Printing** (as per `LEDGERS.pdf`)
 
 The core business rule:
-Purchased Quantity must match Sold Quantity.
-If Sold > Purchased → show Extra Sold.
-If Sold < Purchased → show Remaining Stock.
-
-No gross profit, net profit, or margin calculation required.
+Purchased Quantity per Lot must match Sold Quantity.
+- Balance > 0 -> Remaining Stock (Units in Hand)
+- Balance < 0 -> Shortage (Extra Sold)
 
 ---
 
@@ -25,269 +23,62 @@ No gross profit, net profit, or margin calculation required.
 Frontend:
 - Next.js (App Router)
 - Tailwind CSS
-- Minimal animations (optional)
-- Chart library (Recharts or Chart.js)
+- Lucide React (Icons)
 
 Backend:
-- Next.js API routes or Server Actions
+- Next.js Server Actions
 - MongoDB (Mongoose ORM)
 
-Authentication:
-- Basic login system (JWT or session-based)
+---
 
-Deployment:
-- Vercel (Frontend + API)
-- MongoDB Atlas
+## 3. Core Modules & Features
+
+### 3.1 Unified Transaction Center
+- **Buy Mode**: Record incoming fruit batches. Auto-merge same-day batches for the same lot name.
+- **Sell Mode**: Link sales to specific batches. Real-time "Stock Pulse" visual.
+- **Quick-Add**: Add Products, Vendors, or Customers on-the-go within the transaction form.
+
+### 3.2 Dashboard (The Pulse)
+- Summary cards for Active Batches, Units in Hand, and Shortages.
+- Inventory Ledger table showing sales progress and batch age.
+
+### 3.3 Detailed Ledger & Printing
+- **Drill-down**: Expand any batch to see full sale history.
+- **T-Ledger Printing**: Export batches in a side-by-side Purchase/Sale format matching the physical ledger book style.
+- **Filters**: Filter by Date Range, Product, or Vendor before printing.
 
 ---
 
-## 3. Core Modules
+## 4. Custom Ledger Layout (Ref: LEDGERS.pdf)
 
-### 3.1 Dashboard
+For each Batch/Lot printed:
 
-Display:
-- Total Purchase Today
-- Total Sales Today
-- Total Current Stock (Fruit-wise)
-- Mismatch Alerts
-    - Extra Sold Items
-    - Remaining Stock Items
-- Simple charts:
-    - Daily Sales
-    - Daily Purchase
-
----
-
-### 3.2 Product Section
-
-Purpose:
-Manage master list of products (fruits).
-
-Fields:
-- Product Name
-- Unit Type (Box, Kg, Lot)
-- Status (Active/Inactive)
-
-Features:
-- Add Product
-- Edit Product
-- Delete (Soft Delete)
-- View All Products
+| Left Side (PURCHASE) | Right Side (SALE) |
+| :--- | :--- |
+| **ITEM NAME** (e.g. APPLE) | Individual Sale Entries |
+| Lot Number / Batch Name | Sale 1 Qty |
+| Qty Purchased | Sale 2 Qty |
+| Vendor Name | ... |
+| Purchase Rate | |
+| | |
+| **BALANCE DAY END** | **TOTAL SOLD** |
 
 ---
 
-### 3.3 Vendor Section
+## 5. Non-Functional Requirements
 
-Fields:
-- Vendor Name
-- Contact Info
-- Status
-
----
-
-### 3.4 Customer Section
-
-Fields:
-- Customer Name
-- Contact Info
-- Status
+- **Print Fidelity**: Print view must be optimized for A4 paper, hiding UI elements like buttons and sidebars.
+- **Data Integrity**: Soft-delete logic for all records to maintain history.
+- **Speed**: Optimized MongoDB aggregations for real-time balance calculation.
 
 ---
 
-### 3.5 Buy Section (Purchase Entry)
+## 6. Implementation Roadmap
 
-Fields:
-- Product (dropdown)
-- Vendor (dropdown)
-- Quantity
-- Rate
-- Date
-- Notes (optional)
-
-Logic:
-- Multiple vendors for same product allowed.
-- Total purchase quantity for product = sum of all purchase entries.
-- Vendors must be clubbed when calculating stock.
-
----
-
-### 3.6 Sell Section (Sales Entry)
-
-Fields:
-- Product (dropdown)
-- Customer (dropdown)
-- Quantity
-- Rate
-- Date
-- Notes
-
-Before saving:
-System must validate:
-
-Available Stock = Total Purchase - Total Sale
-
-IF New Sale Qty > Available Stock:
-    Allow save but mark as "Extra Sold"
-
----
-
-## 4. Core Inventory Logic
-
-For each Product:
-
-total_purchase_qty = sum(all purchase entries)
-total_sale_qty = sum(all sale entries)
-
-IF total_sale_qty == total_purchase_qty:
-    status = "OK"
-
-IF total_sale_qty < total_purchase_qty:
-    remaining_qty = total_purchase_qty - total_sale_qty
-
-IF total_sale_qty > total_purchase_qty:
-    extra_sold_qty = total_sale_qty - total_purchase_qty
-
----
-
-## 5. Display Format (Important)
-
-For each product:
-
-### Case 1 – Sale == Purchase
-
-FRUIT: Kiwi
-
-PURCHASE:
-6 qty purchased (DDF)
-
-SALE:
-Customer A → 6 qty @825
-
-STATUS:
-OK
-
----
-
-### Case 2 – Sale Less
-
-FRUIT: Kiwi
-
-PURCHASE:
-6 qty purchased (DDF)
-
-SALE:
-Customer A → 5 qty @825
-
-REMAINING:
-1 qty
-
----
-
-### Case 3 – Sale More
-
-FRUIT: Kiwi
-
-PURCHASE:
-6 qty purchased (DDF)
-
-EXTRA SOLD:
-1 qty
-
-SALE:
-Customer Z → 7 qty @835
-
----
-
-## 6. Database Schema (MongoDB)
-
-### Product
-- _id
-- name
-- unitType
-- isActive
-- createdAt
-
-### Vendor
-- _id
-- name
-- contact
-- isActive
-
-### Customer
-- _id
-- name
-- contact
-- isActive
-
-### Purchase
-- _id
-- productId
-- vendorId
-- quantity
-- rate
-- date
-- notes
-
-### Sale
-- _id
-- productId
-- customerId
-- quantity
-- rate
-- date
-- notes
-
----
-
-## 7. API Endpoints
-
-POST /api/products
-GET /api/products
-
-POST /api/vendors
-GET /api/vendors
-
-POST /api/customers
-GET /api/customers
-
-POST /api/purchase
-GET /api/purchase
-
-POST /api/sale
-GET /api/sale
-
-GET /api/dashboard-summary
-
----
-
-## 8. Non-Functional Requirements
-
-- Clean UI (no heavy animations)
-- Fast load time
-- Mobile responsive
-- Basic error handling
-- Input validation
-- Soft delete instead of permanent delete
-- Basic role: Admin only (Phase 1)
-
----
-
-## 9. Phase 2 (Optional Future)
-
-- Role-based access
-- Edit history log
-- Stock locking
-- Export to Excel
-- Print reports
-- Audit tracking
-
----
-
-## 10. Final Goal
-
-System must:
-
-- Accurately track product stock.
-- Automatically detect mismatch between purchase and sale.
-- Provide clear visual display of remaining or extra sold quantity.
-- Be simple and reliable for daily business use.
+1.  **Phase 1**: Core CRUD & Database Setup (Completed)
+2.  **Phase 2**: Lot Logic & Stock Pulse (Completed)
+3.  **Phase 3**: Unified Transaction Hub & Quick-Add (Completed)
+4.  **Phase 4**: **T-Ledger Print Optimization** (Next Step)
+    -   Create dedicated CSS `@media print` styles.
+    -   Design the T-Ledger layout component.
+    -   Implement "Print All" and "Print Selected" features.
