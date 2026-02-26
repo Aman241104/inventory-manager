@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Search, Edit2, Power } from "lucide-react";
+import { Plus, Search, Edit2, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { addProduct, updateProduct, toggleProductStatus } from "@/app/actions/product";
+import { addProduct, updateProduct, toggleProductStatus, deleteProduct } from "@/app/actions/product";
 
 interface ProductListProps {
   initialProducts: any[];
@@ -67,6 +67,17 @@ export default function ProductList({ initialProducts }: ProductListProps) {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+      const result = await deleteProduct(id);
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert("Failed to delete product. It might be linked to transactions.");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -104,14 +115,15 @@ export default function ProductList({ initialProducts }: ProductListProps) {
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Product Name</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Unit Type</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Status</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-slate-600">Added Date</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-slate-600">Batches</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-slate-600">Last Trade</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-slate-400 italic">
+                    <td colSpan={6} className="px-4 py-12 text-center text-slate-400 italic">
                       No products found.
                     </td>
                   </tr>
@@ -134,8 +146,11 @@ export default function ProductList({ initialProducts }: ProductListProps) {
                           {product.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
+                      <td className="px-4 py-4 text-sm text-slate-600 font-bold">
+                        {product.totalBatches || 0}
+                      </td>
                       <td className="px-4 py-4 text-sm text-slate-500">
-                        {new Date(product.createdAt).toLocaleDateString()}
+                        {product.lastTransaction ? new Date(product.lastTransaction).toLocaleDateString() : "Never"}
                       </td>
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
@@ -152,6 +167,13 @@ export default function ProductList({ initialProducts }: ProductListProps) {
                             title="Edit Product"
                           >
                             <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(product._id)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>

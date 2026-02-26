@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Search, Edit2, Power, Phone } from "lucide-react";
+import { Plus, Search, Edit2, Power, Phone, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { addVendor, updateVendor, toggleVendorStatus } from "@/app/actions/vendor";
+import { addVendor, updateVendor, toggleVendorStatus, deleteVendor } from "@/app/actions/vendor";
 
 export default function VendorList({ initialVendors }: { initialVendors: any[] }) {
   const [vendors] = useState(initialVendors);
@@ -54,6 +54,17 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
     if (result.success) window.location.reload();
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
+      const result = await deleteVendor(id);
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert("Failed to delete vendor. They might be linked to transactions.");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -90,6 +101,7 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
                 <tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Vendor Name</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Contact</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-center">Batches</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Status</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Actions</th>
                 </tr>
@@ -97,7 +109,7 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
               <tbody className="divide-y divide-slate-50">
                 {filteredVendors.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-slate-400 italic">No vendors found.</td>
+                    <td colSpan={5} className="px-4 py-12 text-center text-slate-400 italic">No vendors found.</td>
                   </tr>
                 ) : (
                   filteredVendors.map((vendor) => (
@@ -108,6 +120,9 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
                           <Phone size={14} className="text-slate-400" />
                           {vendor.contact || "N/A"}
                         </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-center font-bold text-indigo-600">
+                        {vendor.activeLotsCount || 0}
                       </td>
                       <td className="px-4 py-4 text-sm">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -123,6 +138,9 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
                           </button>
                           <button onClick={() => handleOpenEditModal(vendor)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors">
                             <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(vendor._id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors">
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>

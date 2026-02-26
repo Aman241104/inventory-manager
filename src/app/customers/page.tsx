@@ -3,7 +3,7 @@ import CustomerList from "@/components/customers/CustomerList";
 
 export default async function CustomersPage() {
   const result = await getCustomers();
-  const initialCustomers = result.success ? result.data : [];
+  const initialCustomers = result.success && result.data ? result.data : [];
 
   return <CustomerList initialCustomers={initialCustomers} />;
 }

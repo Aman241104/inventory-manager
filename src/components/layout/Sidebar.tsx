@@ -8,8 +8,8 @@ import {
   Apple, 
   Users, 
   UserSquare2, 
-  ShoppingCart, 
-  BadgeDollarSign,
+  ArrowRightLeft,
+  FileText,
   Menu,
   X
 } from "lucide-react";
@@ -20,8 +20,8 @@ const navItems = [
   { label: "Products", href: "/products", icon: Apple },
   { label: "Vendors", href: "/vendors", icon: Users },
   { label: "Customers", href: "/customers", icon: UserSquare2 },
-  { label: "Buy Section", href: "/buy", icon: ShoppingCart },
-  { label: "Sell Section", href: "/sell", icon: BadgeDollarSign },
+  { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
+  { label: "Detailed Report", href: "/details", icon: FileText },
 ];
 
 export default function Sidebar() {

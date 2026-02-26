@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import connectDB from "@/lib/mongodb";
 import Customer from "@/models/Customer";
+import Sale from "@/models/Sale";
 import { MOCK_CUSTOMERS } from "@/lib/mockData";
 
 const USE_MOCK = process.env.USE_MOCK === "true";
@@ -12,7 +13,20 @@ export async function getCustomers() {
   try {
     await connectDB();
     const customers = await Customer.find({}).sort({ createdAt: -1 });
-    return { success: true, data: JSON.parse(JSON.stringify(customers)) };
+
+    const customersWithStats = await Promise.all(customers.map(async (c) => {
+      const distinctLotsSold = await Sale.aggregate([
+        { $match: { customerId: c._id, isDeleted: false } },
+        { $group: { _id: "$purchaseId" } }
+      ]);
+      return {
+        ...c.toObject(),
+        _id: c._id.toString(),
+        activeLotsCount: distinctLotsSold.length
+      };
+    }));
+
+    return { success: true, data: customersWithStats };
   } catch (error) {
     console.error("Failed to fetch customers:", error);
     return { success: false, error: "Failed to fetch customers" };
@@ -43,6 +57,19 @@ export async function updateCustomer(id: string, formData: { name: string; conta
   } catch (error) {
     console.error("Failed to update customer:", error);
     return { success: false, error: "Failed to update customer" };
+  }
+}
+
+export async function deleteCustomer(id: string) {
+  if (USE_MOCK) return { success: true };
+  try {
+    await connectDB();
+    await Customer.findByIdAndDelete(id);
+    revalidatePath("/customers");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete customer:", error);
+    return { success: false, error: "Failed to delete customer" };
   }
 }
 

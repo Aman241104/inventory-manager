@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
+import Purchase from "@/models/Purchase";
+import Sale from "@/models/Sale";
 import { IProduct } from "@/types";
 import { MOCK_PRODUCTS } from "@/lib/mockData";
 
@@ -13,7 +15,30 @@ export async function getProducts() {
   try {
     await connectDB();
     const products = await Product.find({}).sort({ createdAt: -1 });
-    return { success: true, data: JSON.parse(JSON.stringify(products)) };
+
+    const productsWithStats = await Promise.all(products.map(async (p) => {
+      const lastPurchase = await Purchase.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 });
+      const lastSale = await Sale.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 });
+      const totalBatches = await Purchase.countDocuments({ productId: p._id, isDeleted: false });
+
+      let lastDate = null;
+      if (lastPurchase && lastSale) {
+        lastDate = lastPurchase.date > lastSale.date ? lastPurchase.date : lastSale.date;
+      } else if (lastPurchase) {
+        lastDate = lastPurchase.date;
+      } else if (lastSale) {
+        lastDate = lastSale.date;
+      }
+
+      return {
+        ...p.toObject(),
+        _id: p._id.toString(),
+        lastTransaction: lastDate,
+        totalBatches
+      };
+    }));
+
+    return { success: true, data: productsWithStats };
   } catch (error) {
     console.error("Failed to fetch products:", error);
     return { success: false, error: "Failed to fetch products" };
@@ -44,6 +69,19 @@ export async function updateProduct(id: string, formData: Partial<IProduct>) {
   } catch (error) {
     console.error("Failed to update product:", error);
     return { success: false, error: "Failed to update product" };
+  }
+}
+
+export async function deleteProduct(id: string) {
+  if (USE_MOCK) return { success: true };
+  try {
+    await connectDB();
+    await Product.findByIdAndDelete(id);
+    revalidatePath("/products");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete product:", error);
+    return { success: false, error: "Failed to delete product" };
   }
 }
 

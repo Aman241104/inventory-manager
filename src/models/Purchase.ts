@@ -5,6 +5,7 @@ const PurchaseSchema = new Schema<IPurchase>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true, index: true },
+    lotName: { type: String, required: true, default: 'Batch 1' },
     quantity: { type: Number, required: true, min: 0.0001 },
     rate: { type: Number, required: true, min: 0.0001 },
     totalAmount: { type: Number },

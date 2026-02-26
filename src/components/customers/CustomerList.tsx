@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Search, Edit2, Power, User } from "lucide-react";
+import { Plus, Search, Edit2, Power, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { addCustomer, updateCustomer, toggleCustomerStatus } from "@/app/actions/customer";
+import { addCustomer, updateCustomer, toggleCustomerStatus, deleteCustomer } from "@/app/actions/customer";
 
 export default function CustomerList({ initialCustomers }: { initialCustomers: any[] }) {
   const [customers] = useState(initialCustomers);
@@ -54,6 +54,17 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
     if (result.success) window.location.reload();
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this customer? This action cannot be undone.")) {
+      const result = await deleteCustomer(id);
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert("Failed to delete customer. They might be linked to transactions.");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -90,6 +101,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                 <tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Customer Name</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Contact</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-center">Batches</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600">Status</th>
                   <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Actions</th>
                 </tr>
@@ -97,7 +109,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
               <tbody className="divide-y divide-slate-50">
                 {filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-slate-400 italic">No customers found.</td>
+                    <td colSpan={5} className="px-4 py-12 text-center text-slate-400 italic">No customers found.</td>
                   </tr>
                 ) : (
                   filteredCustomers.map((customer) => (
@@ -108,6 +120,9 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                           <User size={14} className="text-slate-400" />
                           {customer.contact || "N/A"}
                         </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-center font-bold text-emerald-600">
+                        {customer.activeLotsCount || 0}
                       </td>
                       <td className="px-4 py-4 text-sm">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -123,6 +138,9 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                           </button>
                           <button onClick={() => handleOpenEditModal(customer)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors">
                             <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(customer._id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors">
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>

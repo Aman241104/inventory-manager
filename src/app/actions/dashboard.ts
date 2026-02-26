@@ -3,135 +3,62 @@
 import connectDB from "@/lib/mongodb";
 import Purchase from "@/models/Purchase";
 import Sale from "@/models/Sale";
-import Product from "@/models/Product";
-
-const USE_MOCK = process.env.USE_MOCK === "true";
+import { ILotSummary } from "@/types";
 
 export async function getDashboardStats() {
-  if (USE_MOCK) {
-    return {
-      success: true,
-      data: {
-        purchaseToday: 24500,
-        saleToday: 18200,
-        productCount: 4,
-        extraSoldCount: 1,
-        inventorySummary: [
-          { _id: '1', name: 'Kiwi', unitType: 'Box', totalBuy: 10, totalSell: 4, status: 'Remaining', diff: 6 },
-          { _id: '2', name: 'Mango', unitType: 'Box', totalBuy: 20, totalSell: 25, status: 'Extra Sold', diff: 5 },
-          { _id: '3', name: 'Grapes', unitType: 'Kg', totalBuy: 50, totalSell: 50, status: 'OK', diff: 0 },
-        ],
-        dailyData: [
-          { name: 'Mon', purchase: 4000, sale: 2400 },
-          { name: 'Tue', purchase: 3000, sale: 1398 },
-          { name: 'Wed', purchase: 2000, sale: 9800 },
-          { name: 'Thu', purchase: 2780, sale: 3908 },
-          { name: 'Fri', purchase: 1890, sale: 4800 },
-          { name: 'Sat', purchase: 2390, sale: 3800 },
-          { name: 'Sun', purchase: 3490, sale: 4300 },
-        ]
-      }
-    };
-  }
   try {
     await connectDB();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
-    // Total Purchase Today
-    const purchaseToday = await Purchase.aggregate([
-      { $match: { date: { $gte: today } } },
-      { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$rate"] } } } }
-    ]);
+    // Get all lots (Purchases)
+    const lots = await Purchase.find({ isDeleted: false })
+      .populate("productId", "name unitType")
+      .sort({ date: -1 });
 
-    // Total Sale Today
-    const saleToday = await Sale.aggregate([
-      { $match: { date: { $gte: today } } },
-      { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$rate"] } } } }
-    ]);
+    const lotSummaries: ILotSummary[] = await Promise.all(
+      lots.map(async (lot) => {
+        // Find all sales for this specific lot
+        const sales = await Sale.find({ purchaseId: lot._id, isDeleted: false })
+          .populate("customerId", "name")
+          .sort({ date: 1 });
 
-    // Total Products
-    const productCount = await Product.countDocuments({ isActive: true });
+        const totalSold = sales.reduce((acc, sale) => acc + sale.quantity, 0);
+        const remainingStock = lot.quantity - totalSold;
 
-    // Extra Sold Count
-    const extraSoldCount = await Sale.countDocuments({ isExtraSold: true });
+        let status: 'OK' | 'REMAINING' | 'EXTRA_SOLD' = 'OK';
+        if (remainingStock > 0) status = 'REMAINING';
+        if (remainingStock < 0) status = 'EXTRA_SOLD';
 
-    // Daily Data for Charts (Last 7 Days)
-    const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() - i);
-      const nextD = new Date(d);
-      nextD.setDate(d.getDate() + 1);
+        return {
+          lotId: lot._id.toString(),
+          productName: lot.productId?.name || "Deleted Product",
+          unitType: lot.productId?.unitType || "N/A",
+          lotName: lot.lotName,
+          date: lot.date.toISOString().split('T')[0],
+          totalPurchased: lot.quantity,
+          sales: sales.map(s => ({
+            customerName: s.customerId?.name || "Unknown",
+            quantity: s.quantity,
+            date: s.date.toISOString().split('T')[0]
+          })),
+          remainingStock: remainingStock,
+          status
+        };
+      })
+    );
 
-      const pDay = await Purchase.aggregate([
-        { $match: { date: { $gte: d, $lt: nextD } } },
-        { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$rate"] } } } }
-      ]);
-
-      const sDay = await Sale.aggregate([
-        { $match: { date: { $gte: d, $lt: nextD } } },
-        { $group: { _id: null, total: { $sum: { $multiply: ["$quantity", "$rate"] } } } }
-      ]);
-
-      last7Days.push({
-        name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        purchase: pDay[0]?.total || 0,
-        sale: sDay[0]?.total || 0
-      });
-    }
-
-    // Inventory Summary (Product-wise)
-    const products = await Product.find({ isActive: true }).select("name unitType");
-    
-    const inventorySummary = await Promise.all(products.map(async (p) => {
-      const pId = p._id;
-      
-      const purchases = await Purchase.aggregate([
-        { $match: { productId: pId } },
-        { $group: { _id: null, total: { $sum: "$quantity" } } }
-      ]);
-      
-      const sales = await Sale.aggregate([
-        { $match: { productId: pId } },
-        { $group: { _id: null, total: { $sum: "$quantity" } } }
-      ]);
-
-      const totalBuy = purchases[0]?.total || 0;
-      const totalSell = sales[0]?.total || 0;
-      
-      let status = "OK";
-      let diff = 0;
-      
-      if (totalSell > totalBuy) {
-        status = "Extra Sold";
-        diff = totalSell - totalBuy;
-      } else if (totalBuy > totalSell) {
-        status = "Remaining";
-        diff = totalBuy - totalSell;
-      }
-
-      return {
-        _id: p._id,
-        name: p.name,
-        unitType: p.unitType,
-        totalBuy,
-        totalSell,
-        status,
-        diff
-      };
-    }));
+    const totalBatchesActive = lotSummaries.filter(l => l.remainingStock > 0).length;
+    const totalUnitsInHand = lotSummaries.reduce((acc, l) => acc + (l.remainingStock > 0 ? l.remainingStock : 0), 0);
+    const totalShortage = lotSummaries.reduce((acc, l) => acc + (l.remainingStock < 0 ? Math.abs(l.remainingStock) : 0), 0);
 
     return {
       success: true,
       data: {
-        purchaseToday: purchaseToday[0]?.total || 0,
-        saleToday: saleToday[0]?.total || 0,
-        productCount,
-        extraSoldCount,
-        inventorySummary,
-        dailyData: last7Days
+        lotSummaries,
+        summary: {
+          totalBatchesActive,
+          totalUnitsInHand,
+          totalShortage
+        }
       }
     };
   } catch (error) {

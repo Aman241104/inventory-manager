@@ -26,12 +26,13 @@ export interface ICustomer extends Document {
 }
 
 export interface IPurchase extends Document {
-  productId: Types.ObjectId;
-  vendorId: Types.ObjectId;
+  productId: Types.ObjectId | any;
+  vendorId: Types.ObjectId | any;
+  lotName: string; // e.g., "Batch 1", "Lot A"
   quantity: number;
   rate: number;
   totalAmount: number;
-  date: Date;
+  date: string | Date;
   notes?: string;
   isDeleted: boolean;
   createdAt: Date;
@@ -39,15 +40,32 @@ export interface IPurchase extends Document {
 }
 
 export interface ISale extends Document {
-  productId: Types.ObjectId;
-  customerId: Types.ObjectId;
+  productId: Types.ObjectId | any;
+  customerId: Types.ObjectId | any;
+  purchaseId: Types.ObjectId | any; // Reference to the specific Batch/Lot
   quantity: number;
   rate: number;
   totalAmount: number;
-  date: Date;
+  date: string | Date;
   notes?: string;
   isExtraSold: boolean;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ILotSummary {
+  lotId: string;
+  productName: string;
+  unitType: string;
+  lotName: string;
+  date: string;
+  totalPurchased: number;
+  sales: {
+    customerName: string;
+    quantity: number;
+    date: string;
+  }[];
+  remainingStock: number;
+  status: 'OK' | 'REMAINING' | 'EXTRA_SOLD';
 }

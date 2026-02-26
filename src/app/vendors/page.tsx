@@ -3,7 +3,7 @@ import VendorList from "@/components/vendors/VendorList";
 
 export default async function VendorsPage() {
   const result = await getVendors();
-  const initialVendors = result.success ? result.data : [];
+  const initialVendors = result.success && result.data ? result.data : [];
 
   return <VendorList initialVendors={initialVendors} />;
 }

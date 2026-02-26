@@ -5,6 +5,7 @@ const SaleSchema = new Schema<ISale>(
   {
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
+    purchaseId: { type: Schema.Types.ObjectId, ref: 'Purchase', required: true, index: true },
     quantity: { type: Number, required: true, min: 0.0001 },
     rate: { type: Number, required: true, min: 0.0001 },
     totalAmount: { type: Number },
