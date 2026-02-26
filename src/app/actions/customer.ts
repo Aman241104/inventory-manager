@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import connectDB from "@/lib/mongodb";
 import Customer from "@/models/Customer";
 import Sale from "@/models/Sale";
+import mongoose from "mongoose";
 import { MOCK_CUSTOMERS } from "@/lib/mockData";
 
 const USE_MOCK = process.env.USE_MOCK === "true";
@@ -16,7 +17,7 @@ export async function getCustomers() {
 
     const customersWithStats = await Promise.all(customers.map(async (c: any) => {
       const distinctLotsSold = await Sale.aggregate([
-        { $match: { customerId: c._id, isDeleted: false } },
+        { $match: { customerId: new mongoose.Types.ObjectId(c._id), isDeleted: false } },
         { $group: { _id: "$purchaseId" } }
       ]);
       return {

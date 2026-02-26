@@ -78,7 +78,7 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
     if (!lot) return { success: false, error: "Lot not found" };
 
     const previousSales = await Sale.aggregate([
-      { $match: { purchaseId: lot._id, isDeleted: false } },
+      { $match: { purchaseId: new mongoose.Types.ObjectId(lot._id), isDeleted: false } },
       { $group: { _id: null, total: { $sum: "$quantity" } } }
     ]);
 
@@ -161,7 +161,7 @@ export async function getLotsForProduct(productId: string) {
             
         const lotsWithAvailable = await Promise.all(lots.map(async (lot: any) => {
             const sales = await Sale.aggregate([
-                { $match: { purchaseId: lot._id, isDeleted: false } },
+                { $match: { purchaseId: new mongoose.Types.ObjectId(lot._id), isDeleted: false } },
                 { $group: { _id: null, total: { $sum: "$quantity" } } }
             ]);
             const soldSoFar = sales[0]?.total || 0;

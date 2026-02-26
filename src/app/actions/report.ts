@@ -43,7 +43,12 @@ export async function getDetailedReport(filters: {
 }) {
   try {
     await connectDB();
-
+    
+    // Explicitly register schemas for population
+    const _v = Vendor;
+    const _c = Customer;
+    const _p = Product;
+    
     const query: any = { isDeleted: false };
     if (filters.productId) query.productId = filters.productId;
     if (filters.fromDate || filters.toDate) {

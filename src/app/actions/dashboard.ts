@@ -3,11 +3,19 @@
 import connectDB from "@/lib/mongodb";
 import Purchase from "@/models/Purchase";
 import Sale from "@/models/Sale";
+import Product from "@/models/Product";
+import Vendor from "@/models/Vendor";
+import Customer from "@/models/Customer";
 import { ILotSummary } from "@/types";
 
 export async function getDashboardStats() {
   try {
     await connectDB();
+
+    // Explicitly register for population
+    const _p = Product;
+    const _v = Vendor;
+    const _c = Customer;
 
     // Get all lots (Purchases)
     const lots = await Purchase.find({ isDeleted: false })
