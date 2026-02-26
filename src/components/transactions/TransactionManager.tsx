@@ -126,7 +126,7 @@ export default function TransactionManager({
           ) : (
             <Button variant="outline" onClick={() => setIsEntryMode(false)} className="gap-2 w-full md:w-auto justify-center py-4 md:py-2">
               <History size={18} />
-              View Today's List
+              View Today&apos;s List
             </Button>
           ) /* Fixed typo in View Today's List */}
         </div>
