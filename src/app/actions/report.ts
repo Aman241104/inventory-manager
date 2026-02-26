@@ -75,36 +75,42 @@ export async function getDetailedReport(filters: {
     .lean();
 
     const detailedRows = lots.map((lot: any) => {
-      // Filter sales for this specific lot from the pre-fetched list
-      const lotSales = allSales.filter((s: any) => s.purchaseId.toString() === lot._id.toString());
-      const totalSold = lotSales.reduce((acc: number, s: any) => acc + s.quantity, 0);
+      try {
+        const lotSales = allSales.filter((s: any) => s.purchaseId && s.purchaseId.toString() === lot._id.toString());
+        const totalSold = lotSales.reduce((acc: number, s: any) => acc + s.quantity, 0);
+        
+        const lotDate = lot.date ? new Date(lot.date) : new Date();
+        
+        return {
+          lotId: lot._id.toString(),
+          date: lotDate.toISOString().split('T')[0],
+          productName: lot.productId?.name || "Deleted Product",
+          unitType: lot.productId?.unitType || "N/A",
+          lotName: lot.lotName || "Unnamed Batch",
+          vendorName: lot.vendorId?.name || "N/A",
+          purchasedQty: lot.quantity || 0,
+          purchasedRate: lot.rate || 0,
+          purchasedTotal: lot.totalAmount || (lot.quantity * lot.rate) || 0,
+          sales: lotSales.map((s: any) => ({
+            saleId: s._id.toString(),
+            date: s.date ? new Date(s.date).toISOString().split('T')[0] : lotDate.toISOString().split('T')[0],
+            customerName: s.customerId?.name || "N/A",
+            quantity: s.quantity || 0,
+            rate: s.rate || 0,
+            total: s.totalAmount || (s.quantity * s.rate) || 0
+          })),
+          totalSoldQty: totalSold,
+          remainingQty: (lot.quantity || 0) - totalSold
+        };
+      } catch (err) {
+        console.error("Error processing lot row:", err);
+        return null;
+      }
+    }).filter(Boolean);
 
-      return {
-        lotId: lot._id.toString(),
-        date: new Date(lot.date).toISOString().split('T')[0],
-        productName: lot.productId?.name || "Deleted Product",
-        unitType: lot.productId?.unitType || "N/A",
-        lotName: lot.lotName,
-        vendorName: lot.vendorId?.name || "N/A",
-        purchasedQty: lot.quantity,
-        purchasedRate: lot.rate,
-        purchasedTotal: lot.totalAmount || (lot.quantity * lot.rate),
-        sales: lotSales.map((s: any) => ({
-          saleId: s._id.toString(),
-          date: new Date(s.date).toISOString().split('T')[0],
-          customerName: s.customerId?.name || "N/A",
-          quantity: s.quantity,
-          rate: s.rate,
-          total: s.totalAmount || (s.quantity * s.rate)
-        })),
-        totalSoldQty: totalSold,
-        remainingQty: lot.quantity - totalSold
-      };
-    });
-
-    return { success: true, data: detailedRows };
-  } catch (error) {
-    console.error("Report error:", error);
-    return { success: false, error: "Failed to fetch detailed report" };
+    return { success: true, data: JSON.parse(JSON.stringify(detailedRows)) };
+  } catch (error: any) {
+    console.error("Report error detail:", error);
+    return { success: false, error: error.message || "Failed to fetch detailed report" };
   }
 }

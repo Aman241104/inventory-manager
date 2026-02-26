@@ -13,7 +13,8 @@ import {
   TrendingUp,
   TrendingDown,
   Info,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -22,6 +23,7 @@ import LedgerCard from "./LedgerCard";
 
 export default function ReportViewer({ products }: { products: any[] }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'ledger'>('table');
@@ -34,11 +36,18 @@ export default function ReportViewer({ products }: { products: any[] }) {
 
   const fetchReport = async () => {
     setLoading(true);
-    const res = await getDetailedReport(filters);
-    if (res.success && res.data) {
-      setData(res.data);
-    } else {
-      setData([]);
+    setError(null);
+    try {
+      const res = await getDetailedReport(filters);
+      if (res.success && res.data) {
+        setData(res.data);
+      } else {
+        setData([]);
+        if (!res.success) setError(res.error || "Unknown error occurred");
+      }
+    } catch (err: any) {
+      setError("Failed to connect to server");
+      console.error(err);
     }
     setLoading(false);
   };
@@ -139,6 +148,13 @@ export default function ReportViewer({ products }: { products: any[] }) {
           </div>
         </CardContent>
       </Card>
+
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-sm font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <AlertTriangle size={18} />
+          {error}
+        </div>
+      )}
 
       {/* Conditional Rendering based on View Mode */}
       {viewMode === 'table' ? (
