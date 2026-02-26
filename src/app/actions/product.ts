@@ -14,11 +14,11 @@ export async function getProducts() {
   if (USE_MOCK) return { success: true, data: MOCK_PRODUCTS };
   try {
     await connectDB();
-    const products = await Product.find({}).sort({ createdAt: -1 });
+    const products = await Product.find({}).sort({ createdAt: -1 }).lean();
 
-    const productsWithStats = await Promise.all(products.map(async (p) => {
-      const lastPurchase = await Purchase.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 });
-      const lastSale = await Sale.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 });
+    const productsWithStats = await Promise.all(products.map(async (p: any) => {
+      const lastPurchase = await Purchase.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 }).lean();
+      const lastSale = await Sale.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 }).lean();
       const totalBatches = await Purchase.countDocuments({ productId: p._id, isDeleted: false });
 
       let lastDate = null;
@@ -31,7 +31,7 @@ export async function getProducts() {
       }
 
       return {
-        ...p.toObject(),
+        ...p,
         _id: p._id.toString(),
         lastTransaction: lastDate,
         totalBatches

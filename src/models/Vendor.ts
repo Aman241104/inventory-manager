@@ -6,7 +6,7 @@ const VendorSchema = new Schema<IVendor>(
     name: { type: String, required: true },
     contact: { type: String },
     address: { type: String },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true }
 );

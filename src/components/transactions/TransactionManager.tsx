@@ -176,47 +176,10 @@ export default function TransactionManager({
                         onSuccess={handleSuccess}
                       />
                     )}
-                  </div>
-                ) : (
-                  <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-                    {/* Today's Mini Summary Bar */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex items-center gap-3">
-                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600"><Layers size={16}/></div>
-                        <div>
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Batches</div>
-                          <div className="text-xl font-black text-slate-800">{initialPurchases.length}</div>
-                        </div>
-                      </div>
-                      <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex items-center gap-3">
-                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><Activity size={16}/></div>
-                        <div>
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Sales</div>
-                          <div className="text-xl font-black text-slate-800">{initialSales.length}</div>
-                        </div>
-                      </div>
-                      <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex items-center gap-3">
-                        <div className="p-2 bg-slate-50 rounded-lg text-slate-600"><TrendingUp size={16}/></div>
-                        <div>
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Qty In</div>
-                          <div className="text-xl font-black text-slate-800">
-                            {initialPurchases.reduce((acc, p) => acc + p.quantity, 0)}
                           </div>
-                        </div>
-                      </div>
-                      <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex items-center gap-3">
-                        <div className="p-2 bg-slate-50 rounded-lg text-slate-600"><TrendingDown size={16}/></div>
-                        <div>
-                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Qty Out</div>
-                          <div className="text-xl font-black text-slate-800">
-                            {initialSales.reduce((acc, s) => acc + s.quantity, 0)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-          
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      {/* Today's Purchases */}
+                        ) : (
+                          <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">                      {/* Today's Purchases */}
                       <div className="space-y-4">
                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2">
                           <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />

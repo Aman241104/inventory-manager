@@ -5,7 +5,7 @@ const CustomerSchema = new Schema<ICustomer>(
   {
     name: { type: String, required: true },
     contact: { type: String },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true }
 );

@@ -60,15 +60,24 @@ export async function getDetailedReport(filters: {
     const lots = await Purchase.find(query)
       .populate("productId", "name unitType")
       .populate("vendorId", "name")
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
 
-    const detailedRows = await Promise.all(lots.map(async (lot) => {
-      // Get all sales for this specific lot
-      const sales = await Sale.find({ purchaseId: lot._id, isDeleted: false })
-        .populate("customerId", "name")
-        .sort({ date: 1 });
+    const lotIds = lots.map((l: any) => l._id);
 
-      const totalSold = sales.reduce((acc, s) => acc + s.quantity, 0);
+    // Fetch all sales for these lots in ONE query
+    const allSales = await Sale.find({ 
+      purchaseId: { $in: lotIds }, 
+      isDeleted: false 
+    })
+    .populate("customerId", "name")
+    .sort({ date: 1 })
+    .lean();
+
+    const detailedRows = lots.map((lot: any) => {
+      // Filter sales for this specific lot from the pre-fetched list
+      const lotSales = allSales.filter((s: any) => s.purchaseId.toString() === lot._id.toString());
+      const totalSold = lotSales.reduce((acc: number, s: any) => acc + s.quantity, 0);
 
       return {
         lotId: lot._id.toString(),
@@ -80,7 +89,7 @@ export async function getDetailedReport(filters: {
         purchasedQty: lot.quantity,
         purchasedRate: lot.rate,
         purchasedTotal: lot.totalAmount || (lot.quantity * lot.rate),
-        sales: sales.map(s => ({
+        sales: lotSales.map((s: any) => ({
           saleId: s._id.toString(),
           date: new Date(s.date).toISOString().split('T')[0],
           customerName: s.customerId?.name || "N/A",
@@ -91,7 +100,7 @@ export async function getDetailedReport(filters: {
         totalSoldQty: totalSold,
         remainingQty: lot.quantity - totalSold
       };
-    }));
+    });
 
     return { success: true, data: detailedRows };
   } catch (error) {

@@ -5,7 +5,7 @@ const ProductSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true, index: true },
     unitType: { type: String, enum: ['Box', 'Kg', 'Lot'], required: true },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true }
 );

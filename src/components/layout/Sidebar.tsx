@@ -8,20 +8,23 @@ import {
   Apple, 
   Users, 
   UserSquare2, 
-  ArrowRightLeft,
+  Zap,
   FileText,
   Menu,
-  X
+  X,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Today's Hub", href: "/", icon: Zap },
+  { label: "Detailed Ledger", href: "/details", icon: FileText },
+];
+
+const manageItems = [
   { label: "Products", href: "/products", icon: Apple },
   { label: "Vendors", href: "/vendors", icon: Users },
   { label: "Customers", href: "/customers", icon: UserSquare2 },
-  { label: "Transactions", href: "/transactions", icon: ArrowRightLeft },
-  { label: "Detailed Report", href: "/details", icon: FileText },
 ];
 
 export default function Sidebar() {
@@ -32,10 +35,10 @@ export default function Sidebar() {
     <>
       {/* Mobile Toggle */}
       <button 
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-md"
+        className="lg:hidden fixed top-3 left-4 z-50 p-2 bg-indigo-600 text-white rounded-lg shadow-lg"
         onClick={() => setIsOpen(!isOpen)}
       >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {/* Sidebar */}
@@ -53,30 +56,60 @@ export default function Sidebar() {
           </div>
 
           {/* Nav Items */}
-          <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
-                    isActive 
-                      ? "bg-indigo-600 text-white" 
-                      : "hover:bg-slate-800 hover:text-white"
-                  )}
-                >
-                  <Icon size={20} className={cn(
-                    isActive ? "text-white" : "text-slate-400 group-hover:text-emerald-400"
-                  )} />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
+            <div className="space-y-2">
+              <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Main Hub</p>
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
+                      isActive 
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50" 
+                        : "hover:bg-slate-800 hover:text-white"
+                    )}
+                  >
+                    <Icon size={20} className={cn(
+                      isActive ? "text-white" : "text-slate-400 group-hover:text-emerald-400"
+                    )} />
+                    <span className="font-bold text-sm">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="space-y-2">
+              <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Manage Data</p>
+              {manageItems.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
+                      isActive 
+                        ? "bg-slate-700 text-white" 
+                        : "hover:bg-slate-800 hover:text-white"
+                    )}
+                  >
+                    <Icon size={18} className={cn(
+                      isActive ? "text-white" : "text-slate-500 group-hover:text-emerald-400"
+                    )} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
           {/* Footer */}

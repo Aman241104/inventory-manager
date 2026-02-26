@@ -12,12 +12,12 @@ export async function getVendors() {
   if (USE_MOCK) return { success: true, data: MOCK_VENDORS };
   try {
     await connectDB();
-    const vendors = await Vendor.find({}).sort({ createdAt: -1 });
+    const vendors = await Vendor.find({}).sort({ createdAt: -1 }).lean();
     
-    const vendorsWithStats = await Promise.all(vendors.map(async (v) => {
+    const vendorsWithStats = await Promise.all(vendors.map(async (v: any) => {
       const activeLots = await Purchase.countDocuments({ vendorId: v._id, isDeleted: false });
       return {
-        ...v.toObject(),
+        ...v,
         _id: v._id.toString(),
         activeLotsCount: activeLots
       };

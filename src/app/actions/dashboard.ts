@@ -12,16 +12,25 @@ export async function getDashboardStats() {
     // Get all lots (Purchases)
     const lots = await Purchase.find({ isDeleted: false })
       .populate("productId", "name unitType")
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
 
-    const lotSummaries: ILotSummary[] = await Promise.all(
-      lots.map(async (lot) => {
-        // Find all sales for this specific lot
-        const sales = await Sale.find({ purchaseId: lot._id, isDeleted: false })
-          .populate("customerId", "name")
-          .sort({ date: 1 });
+    const lotIds = lots.map((l: any) => l._id);
 
-        const totalSold = sales.reduce((acc, sale) => acc + sale.quantity, 0);
+    // Fetch all sales for these lots in ONE query
+    const allSales = await Sale.find({ 
+      purchaseId: { $in: lotIds }, 
+      isDeleted: false 
+    })
+    .populate("customerId", "name")
+    .sort({ date: 1 })
+    .lean();
+
+    const lotSummaries: ILotSummary[] = lots.map((lot: any) => {
+        // Filter sales for this specific lot from the pre-fetched list
+        const lotSales = allSales.filter((s: any) => s.purchaseId.toString() === lot._id.toString());
+
+        const totalSold = lotSales.reduce((acc: number, sale: any) => acc + sale.quantity, 0);
         const remainingStock = lot.quantity - totalSold;
 
         let status: 'OK' | 'REMAINING' | 'EXTRA_SOLD' = 'OK';
@@ -36,7 +45,7 @@ export async function getDashboardStats() {
           purchaseRate: lot.rate,
           date: new Date(lot.date).toISOString().split('T')[0],
           totalPurchased: lot.quantity,
-          sales: sales.map(s => ({
+          sales: lotSales.map((s: any) => ({
             customerName: s.customerId?.name || "Unknown",
             quantity: s.quantity,
             rate: s.rate,
@@ -45,8 +54,7 @@ export async function getDashboardStats() {
           remainingStock: remainingStock,
           status
         };
-      })
-    );
+    });
 
     const totalBatchesActive = lotSummaries.filter(l => l.remainingStock > 0).length;
     const totalUnitsInHand = lotSummaries.reduce((acc, l) => acc + (l.remainingStock > 0 ? l.remainingStock : 0), 0);

@@ -11,7 +11,7 @@ const PurchaseSchema = new Schema<IPurchase>(
     totalAmount: { type: Number },
     date: { type: Date, default: Date.now, index: true },
     notes: { type: String },
-    isDeleted: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );

@@ -147,9 +147,9 @@ export default function BuyList({
           <span className="font-bold text-sm">{successMessage}</span>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
                 Fruit
@@ -161,7 +161,7 @@ export default function BuyList({
                 ref={fruitSelectRef}
                 required value={formData.productId}
                 onChange={(e) => setFormData({...formData, productId: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
                 <option value="">Select Fruit</option>
                 {products.filter(p => p.isActive).map(p => (
@@ -182,7 +182,7 @@ export default function BuyList({
               <select 
                 required value={formData.vendorId}
                 onChange={(e) => setFormData({...formData, vendorId: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
                 <option value="">Select Vendor</option>
                 {vendors.filter(v => v.isActive).map(v => (
@@ -192,13 +192,13 @@ export default function BuyList({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lot Name / Batch</label>
               <input 
                 type="text" required placeholder="e.g. Batch 1" value={formData.lotName}
                 onChange={(e) => setFormData({...formData, lotName: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
@@ -206,18 +206,18 @@ export default function BuyList({
               <input 
                 type="date" required value={formData.date}
                 onChange={(e) => setFormData({...formData, date: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantity</label>
               <input 
                 type="number" required min="0.0001" step="any" value={formData.quantity}
                 onChange={(e) => setFormData({...formData, quantity: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
@@ -225,7 +225,7 @@ export default function BuyList({
               <input 
                 type="number" required min="0.0001" step="any" value={formData.rate}
                 onChange={(e) => setFormData({...formData, rate: e.target.value})}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
           </div>

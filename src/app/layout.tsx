@@ -3,8 +3,12 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import { cn } from "@/lib/utils";
+import { Apple } from "lucide-react";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: "FruitManager | Inventory System",
@@ -21,7 +25,14 @@ export default function RootLayout({
       <body className={cn(inter.className, "bg-slate-50 text-slate-900")}>
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 lg:ml-64 p-4 lg:p-8">
+          {/* Mobile Top Bar */}
+          <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 z-30 flex items-center px-4 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <Apple className="text-emerald-500" />
+              <span className="text-white font-black uppercase tracking-widest text-sm">FruitManager</span>
+            </div>
+          </div>
+          <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>

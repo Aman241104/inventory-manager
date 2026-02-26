@@ -153,28 +153,29 @@ export async function addProductAction(name: string, unitType: string) {
 }
 
 export async function getLotsForProduct(productId: string) {
-  try {
-    await connectDB();
-    const lots = await Purchase.find({ productId, isDeleted: false })
-      .sort({ date: -1 });
-
-    const lotsWithAvailable = await Promise.all(lots.map(async (lot) => {
-      const sales = await Sale.aggregate([
-        { $match: { purchaseId: lot._id, isDeleted: false } },
-        { $group: { _id: null, total: { $sum: "$quantity" } } }
-      ]);
-      const soldSoFar = sales[0]?.total || 0;
-      return {
-        ...lot.toObject(),
-        _id: lot._id.toString(),
-        availableQty: lot.quantity - soldSoFar
-      };
-    }));
-
-    return { success: true, data: JSON.parse(JSON.stringify(lotsWithAvailable)) };
-  } catch (error) {
-    return { success: false, error: "Failed to fetch lots" };
-  }
+    try {
+        await connectDB();
+        const lots = await Purchase.find({ productId, isDeleted: false })
+            .sort({ date: -1 })
+            .lean();
+            
+        const lotsWithAvailable = await Promise.all(lots.map(async (lot: any) => {
+            const sales = await Sale.aggregate([
+                { $match: { purchaseId: lot._id, isDeleted: false } },
+                { $group: { _id: null, total: { $sum: "$quantity" } } }
+            ]);
+            const soldSoFar = sales[0]?.total || 0;
+            return {
+                ...lot,
+                _id: lot._id.toString(),
+                availableQty: lot.quantity - soldSoFar
+            };
+        }));
+            
+        return { success: true, data: JSON.parse(JSON.stringify(lotsWithAvailable)) };
+    } catch (error) {
+        return { success: false, error: "Failed to fetch lots" };
+    }
 }
 
 export async function getPurchases(fromDate?: string, toDate?: string) {
@@ -197,7 +198,8 @@ export async function getPurchases(fromDate?: string, toDate?: string) {
     const purchases = await Purchase.find(query)
       .populate("productId", "name unitType")
       .populate("vendorId", "name")
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
     return { success: true, data: JSON.parse(JSON.stringify(purchases)) };
   } catch (error) {
     return { success: false, error: "Failed to fetch purchases" };
@@ -225,7 +227,8 @@ export async function getSales(fromDate?: string, toDate?: string) {
       .populate("productId", "name unitType")
       .populate("customerId", "name")
       .populate("purchaseId", "lotName")
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
     return { success: true, data: JSON.parse(JSON.stringify(sales)) };
   } catch (error) {
     return { success: false, error: "Failed to fetch sales" };

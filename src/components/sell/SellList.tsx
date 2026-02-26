@@ -198,10 +198,10 @@ export default function SellList({
           <span className="font-bold text-sm">{successMessage}</span>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Form Fields Column */}
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
                 Fruit
@@ -213,7 +213,7 @@ export default function SellList({
                 ref={fruitSelectRef}
                 required value={formData.productId}
                 onChange={(e) => setFormData({ ...formData, productId: e.target.value, purchaseId: "" })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               >
                 <option value="">Select Fruit</option>
                 {products.filter(p => p.isActive).map(p => (
@@ -231,7 +231,7 @@ export default function SellList({
               <select
                 required value={formData.customerId}
                 onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
               >
                 <option value="">Select Customer</option>
                 {customers.filter(c => c.isActive).map(c => (
@@ -248,7 +248,7 @@ export default function SellList({
               value={formData.purchaseId}
               disabled={!formData.productId}
               onChange={(e) => setFormData({ ...formData, purchaseId: e.target.value })}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-50"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-50"
             >
               <option value="">{formData.productId ? "Choose a lot..." : "Select product first"}</option>
               {availableLots.map(lot => {
@@ -262,13 +262,13 @@ export default function SellList({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantity</label>
               <input
                 type="number" required min="0.0001" step="any" value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${
+                className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${
                   isExtraSold ? "border-rose-300 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
                 }`}
               />
@@ -278,7 +278,7 @@ export default function SellList({
               <input
                 type="number" required min="0.0001" step="any" value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
-                className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${
+                className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${
                   selectedLot && Number(formData.rate) > 0 && Number(formData.rate) < selectedLot.rate 
                     ? "border-rose-300 text-rose-600 focus:ring-rose-500" 
                     : "border-slate-200 focus:ring-indigo-500"
@@ -297,7 +297,7 @@ export default function SellList({
             <input
               type="date" required value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             />
           </div>
         </div>

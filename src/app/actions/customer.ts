@@ -12,15 +12,15 @@ export async function getCustomers() {
   if (USE_MOCK) return { success: true, data: MOCK_CUSTOMERS };
   try {
     await connectDB();
-    const customers = await Customer.find({}).sort({ createdAt: -1 });
+    const customers = await Customer.find({}).sort({ createdAt: -1 }).lean();
 
-    const customersWithStats = await Promise.all(customers.map(async (c) => {
+    const customersWithStats = await Promise.all(customers.map(async (c: any) => {
       const distinctLotsSold = await Sale.aggregate([
         { $match: { customerId: c._id, isDeleted: false } },
         { $group: { _id: "$purchaseId" } }
       ]);
       return {
-        ...c.toObject(),
+        ...c,
         _id: c._id.toString(),
         activeLotsCount: distinctLotsSold.length
       };

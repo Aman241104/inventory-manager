@@ -12,7 +12,7 @@ const SaleSchema = new Schema<ISale>(
     date: { type: Date, default: Date.now, index: true },
     notes: { type: String },
     isExtraSold: { type: Boolean, default: false },
-    isDeleted: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );
