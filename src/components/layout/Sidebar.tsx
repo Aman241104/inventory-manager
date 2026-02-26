@@ -3,11 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Apple, 
-  Users, 
-  UserSquare2, 
+import {
+  LayoutDashboard,
+  Apple,
+  Users,
+  UserSquare2,
   Zap,
   FileText,
   Menu,
@@ -34,17 +34,17 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile Toggle */}
-      <button 
+      <button
         className="lg:hidden fixed top-3 left-4 z-50 p-2 bg-indigo-600 text-white rounded-lg shadow-lg"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Sidebar */}
+      {/* Sidebar - Desktop and Mobile Overlay */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-slate-300 transition-transform duration-300 ease-in-out transform lg:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
           {/* Logo Area */}
@@ -62,7 +62,7 @@ export default function Sidebar() {
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
-                
+
                 return (
                   <Link
                     key={item.href}
@@ -70,8 +70,8 @@ export default function Sidebar() {
                     onClick={() => setIsOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
-                      isActive 
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50" 
+                      isActive
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50"
                         : "hover:bg-slate-800 hover:text-white"
                     )}
                   >
@@ -89,7 +89,7 @@ export default function Sidebar() {
               {manageItems.map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
-                
+
                 return (
                   <Link
                     key={item.href}
@@ -97,8 +97,8 @@ export default function Sidebar() {
                     onClick={() => setIsOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
-                      isActive 
-                        ? "bg-slate-700 text-white" 
+                      isActive
+                        ? "bg-slate-700 text-white"
                         : "hover:bg-slate-800 hover:text-white"
                     )}
                   >
@@ -129,7 +129,7 @@ export default function Sidebar() {
 
       {/* Overlay for mobile */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
           onClick={() => setIsOpen(false)}
         />

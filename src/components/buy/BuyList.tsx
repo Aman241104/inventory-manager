@@ -9,15 +9,15 @@ import { addPurchase, addVendorAction, addProductAction, updatePurchase } from "
 import { deleteLot } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function BuyList({ 
-  initialPurchases, 
-  products: initialProducts, 
+export default function BuyList({
+  initialPurchases,
+  products: initialProducts,
   vendors: initialVendors,
   isInline = false,
   onSuccess
-}: { 
-  initialPurchases: any[], 
-  products: any[], 
+}: {
+  initialPurchases: any[],
+  products: any[],
   vendors: any[],
   isInline?: boolean,
   onSuccess?: () => void
@@ -30,7 +30,7 @@ export default function BuyList({
   const [loading, setLoading] = useState(false);
   const [vendors, setVendors] = useState(initialVendors);
   const [products, setProducts] = useState(initialProducts);
-  
+
   // Edit Lot States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<any>(null);
@@ -114,8 +114,8 @@ export default function BuyList({
       router.refresh();
       if (onSuccess) onSuccess();
       if (!addAnother) {
-          if (!isInline) setTimeout(() => window.location.reload(), 500);
-          else router.refresh();
+        if (!isInline) setTimeout(() => window.location.reload(), 500);
+        else router.refresh();
       }
     }
     setLoading(false);
@@ -193,13 +193,13 @@ export default function BuyList({
   const renderForm = (isModal = true) => (
     <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
       {successMessage && (
-        <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl flex items-center gap-2 animate-bounce">
-          <CheckCircle2 size={18} />
-          <span className="font-bold text-sm">{successMessage}</span>
+        <div className="p-4 bg-emerald-500 text-white rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 animate-in fade-in zoom-in duration-300 mb-6">
+          <CheckCircle2 size={20} className="animate-pulse" />
+          <span className="font-black text-sm uppercase tracking-widest">{successMessage}</span>
         </div>
       )}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-4">
+      <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12">
+        <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
@@ -208,10 +208,10 @@ export default function BuyList({
                   <Apple size={10} /> Quick Add
                 </button>
               </label>
-              <select 
+              <select
                 ref={fruitSelectRef}
                 required value={formData.productId}
-                onChange={(e) => setFormData({...formData, productId: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
                 <option value="">Select Fruit</option>
@@ -223,16 +223,16 @@ export default function BuyList({
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
                 Vendor
-                <button 
+                <button
                   type="button" onClick={() => setIsVendorModalOpen(true)}
                   className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold"
                 >
                   <UserPlus size={10} /> Quick Add
                 </button>
               </label>
-              <select 
+              <select
                 required value={formData.vendorId}
-                onChange={(e) => setFormData({...formData, vendorId: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               >
                 <option value="">Select Vendor</option>
@@ -246,17 +246,17 @@ export default function BuyList({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lot Name / Batch</label>
-              <input 
+              <input
                 type="text" required placeholder="e.g. Batch 1" value={formData.lotName}
-                onChange={(e) => setFormData({...formData, lotName: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, lotName: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Date</label>
-              <input 
+              <input
                 type="date" required value={formData.date}
-                onChange={(e) => setFormData({...formData, date: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
@@ -265,27 +265,27 @@ export default function BuyList({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantity</label>
-              <input 
+              <input
                 type="number" required min="0.0001" step="any" value={formData.quantity}
-                onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Rate</label>
-              <input 
+              <input
                 type="number" required min="0.0001" step="any" value={formData.rate}
-                onChange={(e) => setFormData({...formData, rate: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
           </div>
-          
+
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes (Optional)</label>
-            <textarea 
+            <textarea
               value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               rows={2}
             />
@@ -330,8 +330,8 @@ export default function BuyList({
                 <div className="flex flex-col items-end text-emerald-900">
                   <div className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Entry Summary</div>
                   <div className="text-sm font-bold">
-                    <span className="text-emerald-600 font-black">{formData.quantity || 0}</span> Units 
-                    <span className="mx-2 opacity-20">|</span> 
+                    <span className="text-emerald-600 font-black">{formData.quantity || 0}</span> Units
+                    <span className="mx-2 opacity-20">|</span>
                     <span className="opacity-60 font-medium italic">₹{((Number(formData.quantity) || 0) * (Number(formData.rate) || 0)).toLocaleString()} Total</span>
                   </div>
                 </div>
@@ -340,7 +340,7 @@ export default function BuyList({
           ) : (
             <div className="flex-1 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center p-8 text-center text-slate-300">
               <ShoppingCart size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-medium">Complete the form to see<br/>a live entry preview.</p>
+              <p className="text-sm font-medium">Complete the form to see<br />a live entry preview.</p>
             </div>
           )}
         </div>
@@ -372,17 +372,17 @@ export default function BuyList({
             {renderForm(false)}
           </CardContent>
         </Card>
-        
+
         {/* Quick Add Modals */}
         <Modal isOpen={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} title="Quick Add Product">
           <form onSubmit={handleQuickAddProduct} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
-              <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Unit Type</label>
-              <select value={newProduct.unitType} onChange={(e) => setNewProduct({...newProduct, unitType: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <select value={newProduct.unitType} onChange={(e) => setNewProduct({ ...newProduct, unitType: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option value="Box">Box</option>
                 <option value="Kg">Kg</option>
                 <option value="Lot">Lot</option>
@@ -399,11 +399,11 @@ export default function BuyList({
           <form onSubmit={handleQuickAddVendor} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
-              <input type="text" required value={newVendor.name} onChange={(e) => setNewVendor({...newVendor, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="text" required value={newVendor.name} onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Contact Info</label>
-              <input type="text" required value={newVendor.contact} onChange={(e) => setNewVendor({...newVendor, contact: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="text" required value={newVendor.contact} onChange={(e) => setNewVendor({ ...newVendor, contact: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setIsVendorModalOpen(false)}>Back</Button>
@@ -493,19 +493,19 @@ export default function BuyList({
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lot Name</label>
-              <input type="text" required value={editFormData.lotName} onChange={(e) => setEditFormData({...editFormData, lotName: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="text" required value={editFormData.lotName} onChange={(e) => setEditFormData({ ...editFormData, lotName: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity</label>
-              <input type="number" required value={editFormData.quantity} onChange={(e) => setEditFormData({...editFormData, quantity: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="number" required value={editFormData.quantity} onChange={(e) => setEditFormData({ ...editFormData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rate</label>
-              <input type="number" required value={editFormData.rate} onChange={(e) => setEditFormData({...editFormData, rate: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="number" required value={editFormData.rate} onChange={(e) => setEditFormData({ ...editFormData, rate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
-              <input type="date" required value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="date" required value={editFormData.date} onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4">
@@ -520,11 +520,11 @@ export default function BuyList({
         <form onSubmit={handleQuickAddProduct} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
-            <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" required value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Unit Type</label>
-            <select value={newProduct.unitType} onChange={(e) => setNewProduct({...newProduct, unitType: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <select value={newProduct.unitType} onChange={(e) => setNewProduct({ ...newProduct, unitType: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="Box">Box</option>
               <option value="Kg">Kg</option>
               <option value="Lot">Lot</option>
@@ -541,11 +541,11 @@ export default function BuyList({
         <form onSubmit={handleQuickAddVendor} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
-            <input type="text" required value={newVendor.name} onChange={(e) => setNewVendor({...newVendor, name: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" required value={newVendor.name} onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Contact Info</label>
-            <input type="text" required value={newVendor.contact} onChange={(e) => setNewVendor({...newVendor, contact: e.target.value})} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="text" required value={newVendor.contact} onChange={(e) => setNewVendor({ ...newVendor, contact: e.target.value })} className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => setIsVendorModalOpen(false)}>Back</Button>

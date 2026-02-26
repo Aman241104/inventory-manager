@@ -6,22 +6,22 @@ import { getPurchases, getSales } from "@/app/actions/transaction";
 import { getDashboardStats } from "@/app/actions/dashboard";
 import TransactionManager from "@/components/transactions/TransactionManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { 
-  Package, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
+import {
+  Package,
+  TrendingUp,
+  TrendingDown,
+  Clock,
   History
 } from "lucide-react";
 
 export default async function HomePage() {
   const today = new Date().toISOString().split('T')[0];
-  
+
   const [
-    productsRes, 
-    vendorsRes, 
-    customersRes, 
-    todayPurchases, 
+    productsRes,
+    vendorsRes,
+    customersRes,
+    todayPurchases,
     todaySales,
     statsRes
   ] = await Promise.all([
@@ -47,7 +47,7 @@ export default async function HomePage() {
     <div className="space-y-10 pb-20">
       {/* 1. Direct Transaction Hub */}
       <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading Transaction Hub...</div>}>
-        <TransactionManager 
+        <TransactionManager
           products={productsRes.success && productsRes.data ? productsRes.data : []}
           vendors={vendorsRes.success && vendorsRes.data ? vendorsRes.data : []}
           customers={customersRes.success && customersRes.data ? customersRes.data : []}
@@ -58,7 +58,7 @@ export default async function HomePage() {
 
       {/* 2. Quick Summary Metrics */}
       {statsRes.success && statsRes.data && (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-2">
           <Card className="bg-white border-slate-100 shadow-sm overflow-hidden relative">
             <CardContent className="pt-6">
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-tight">Active Batches</p>
@@ -68,7 +68,7 @@ export default async function HomePage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-white border-slate-100 shadow-sm overflow-hidden relative">
             <CardContent className="pt-6">
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-tight">Units in Hand</p>
@@ -79,7 +79,7 @@ export default async function HomePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-100 shadow-sm overflow-hidden relative col-span-2 lg:col-span-1">
+          <Card className="bg-white border-slate-100 shadow-sm overflow-hidden relative sm:col-span-2 lg:col-span-1">
             <CardContent className="pt-6">
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-tight">Shortage Units</p>
               <div className="flex items-baseline gap-1 md:gap-2">
@@ -106,18 +106,18 @@ export default async function HomePage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-400">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-100 sticky left-0 bg-slate-50 z-10">Fruit / Lot</th>
-                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest">Age</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest border-r border-slate-100 bg-emerald-50/20">Purchased</th>
-                    
+                  <tr className="bg-white border-b-2 border-slate-100 text-slate-400">
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-100 sticky left-0 bg-white z-20">Fruit / Lot</th>
+                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest bg-white">Age</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest border-r border-slate-100 bg-emerald-50/50">Purchased</th>
+
                     {/* Dynamic Sales Columns */}
                     {Array.from({ length: maxSales }).map((_, i) => (
                       <th key={i} className="px-6 py-4 text-[10px] font-black text-indigo-500 uppercase tracking-widest border-r border-slate-50 last:border-r-0">
                         Sale {i + 1}
                       </th>
                     ))}
-                    
+
                     <th className="px-6 py-4 text-[10px] font-black text-slate-900 uppercase tracking-widest border-l border-slate-100 sticky right-0 bg-slate-50 z-10 text-right">Balance</th>
                   </tr>
                 </thead>
@@ -175,17 +175,15 @@ export default async function HomePage() {
                             );
                           })}
 
-                          <td className={`px-6 py-5 border-l border-slate-100 sticky right-0 z-10 text-right group-hover:bg-slate-50 ${
-                            lot.remainingStock > 0 ? "bg-amber-50/30" : 
-                            lot.remainingStock < 0 ? "bg-rose-50/30" : 
-                            "bg-emerald-50/30"
-                          }`}>
+                          <td className={`px-6 py-5 border-l border-slate-100 sticky right-0 z-10 text-right group-hover:bg-slate-50 ${lot.remainingStock > 0 ? "bg-amber-50/30" :
+                            lot.remainingStock < 0 ? "bg-rose-50/30" :
+                              "bg-emerald-50/30"
+                            }`}>
                             <div className="flex flex-col items-end">
-                              <span className={`text-xl font-black tracking-tighter ${
-                                lot.remainingStock > 0 ? "text-amber-600" : 
-                                lot.remainingStock < 0 ? "text-rose-600" : 
-                                "text-emerald-600"
-                              }`}>
+                              <span className={`text-xl font-black tracking-tighter ${lot.remainingStock > 0 ? "text-amber-600" :
+                                lot.remainingStock < 0 ? "text-rose-600" :
+                                  "text-emerald-600"
+                                }`}>
                                 {lot.remainingStock > 0 ? `+${lot.remainingStock}` : lot.remainingStock}
                               </span>
                               <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
