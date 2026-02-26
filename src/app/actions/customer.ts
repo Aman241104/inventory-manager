@@ -1,0 +1,58 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import connectDB from "@/lib/mongodb";
+import Customer from "@/models/Customer";
+import { MOCK_CUSTOMERS } from "@/lib/mockData";
+
+const USE_MOCK = process.env.USE_MOCK === "true";
+
+export async function getCustomers() {
+  if (USE_MOCK) return { success: true, data: MOCK_CUSTOMERS };
+  try {
+    await connectDB();
+    const customers = await Customer.find({}).sort({ createdAt: -1 });
+    return { success: true, data: JSON.parse(JSON.stringify(customers)) };
+  } catch (error) {
+    console.error("Failed to fetch customers:", error);
+    return { success: false, error: "Failed to fetch customers" };
+  }
+}
+
+export async function addCustomer(formData: { name: string; contact: string }) {
+  if (USE_MOCK) return { success: true };
+  try {
+    await connectDB();
+    const newCustomer = new Customer(formData);
+    await newCustomer.save();
+    revalidatePath("/customers");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to add customer:", error);
+    return { success: false, error: "Failed to add customer" };
+  }
+}
+
+export async function updateCustomer(id: string, formData: { name: string; contact: string }) {
+  if (USE_MOCK) return { success: true };
+  try {
+    await connectDB();
+    await Customer.findByIdAndUpdate(id, formData);
+    revalidatePath("/customers");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update customer:", error);
+    return { success: false, error: "Failed to update customer" };
+  }
+}
+
+export async function toggleCustomerStatus(id: string, isActive: boolean) {
+  try {
+    await connectDB();
+    await Customer.findByIdAndUpdate(id, { isActive });
+    revalidatePath("/customers");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update customer" };
+  }
+}
