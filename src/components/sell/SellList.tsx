@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, AlertTriangle, CheckCircle2, Calendar, Filter, X, UserPlus, TrendingUp, Apple, History, BadgeDollarSign } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Calendar, Filter, X, UserPlus, TrendingUp, Apple, History, BadgeDollarSign, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { addSale, getLotsForProduct, addCustomerAction, addProductAction } from "@/app/actions/transaction";
+import { addSale, getLotsForProduct, addCustomerAction, addProductAction, updateSale } from "@/app/actions/transaction";
+import { deleteSale } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function SellList({
@@ -32,6 +33,15 @@ export default function SellList({
   const [products, setProducts] = useState(initialProducts);
   const [availableLots, setAvailableLots] = useState<any[]>([]);
   const [selectedLot, setSelectedLot] = useState<any>(null);
+
+  // Edit Sale States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingSale, setEditingSale] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    quantity: "",
+    rate: "",
+    date: ""
+  });
 
   // Filter states
   const [fromDate, setFromDate] = useState(searchParams.get("fromDate") || "");
@@ -102,7 +112,7 @@ export default function SellList({
       setAvailableLots([]);
       setSelectedLot(null);
     }
-  }, [formData.productId]);
+  }, [formData.productId, formData.purchaseId]);
 
   // Update selected lot details when purchaseId changes
   useEffect(() => {
@@ -159,6 +169,44 @@ export default function SellList({
       console.error("HandleSubmit error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenEdit = (sale: any) => {
+    setEditingSale(sale);
+    setEditFormData({
+      quantity: sale.quantity.toString(),
+      rate: sale.rate.toString(),
+      date: new Date(sale.date).toISOString().split('T')[0]
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const res = await updateSale(editingSale._id, {
+      quantity: Number(editFormData.quantity),
+      rate: Number(editFormData.rate),
+      date: editFormData.date
+    });
+    if (res.success) {
+      setIsEditModalOpen(false);
+      if (onSuccess) onSuccess();
+      router.refresh();
+    } else {
+      alert("Failed to update");
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this sale?")) {
+      const res = await deleteSale(id);
+      if (res.success) {
+        if (onSuccess) onSuccess();
+        router.refresh();
+      }
     }
   };
 
@@ -502,6 +550,7 @@ export default function SellList({
                     <th className="px-4 py-3 text-sm font-semibold text-slate-600">Status</th>
                     <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Rate</th>
                     <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Total</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -529,6 +578,16 @@ export default function SellList({
                       </td>
                       <td className="px-4 py-4 text-sm text-right">₹{s.rate}</td>
                       <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{s.quantity * s.rate}</td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleOpenEdit(s)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(s._id)} className="p-1 text-slate-400 hover:text-rose-600 transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -541,6 +600,30 @@ export default function SellList({
       {/* Record Sale Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Record New Sale">
         {renderForm(true)}
+      </Modal>
+
+      {/* Edit Sale Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Sale Entry">
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity</label>
+              <input type="number" required value={editFormData.quantity} onChange={(e) => setEditFormData({...editFormData, quantity: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rate</label>
+              <input type="number" required value={editFormData.rate} onChange={(e) => setEditFormData({...editFormData, rate: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+              <input type="date" required value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading}>{loading ? "Saving..." : "Update Sale"}</Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Product & Customer Modals for Modal Mode */}

@@ -65,3 +65,16 @@ The client finds the current dashboard (with summaries and graphs) unnecessary. 
 - **Auto-Suggest Rate**: System should remember the last rate used for a specific Fruit to save typing time.
 - **Lot Auto-Close**: If Balance = 0, visually dim the row to signal "Task Finished" for that batch.
 - **No-Mouse Navigation**: Ensure a user can log a whole day's work using only the keyboard (Tab, Enter, Arrows).
+
+---
+
+## 6. Latest Refinements (Feb 2026)
+
+### **Lot & Transaction Management**
+- **In-Place Updates**: Added "Edit" and "Delete" icons directly to the Today's Activity tables (Buy/Sell). Users no longer need to delete and re-enter data for minor mistakes.
+- **Simplified Deletion**: Implemented soft-delete for both Purchases and Sales with confirmation prompts.
+
+### **Visual & Printing Adjustments**
+- **T-Ledger Proportions**: Adjusted the printing layout to favor sales. Purchase details now occupy only 25% of the width, leaving 75% for the sales ledger.
+- **Unit De-cluttering**: Removed "Box/Kg/Lot" labels from all display areas (Stock Ledger, Transaction Hub, Printing). The system now focuses purely on the Product Name and Quantity.
+- **Product Management**: Simplified the "Add Product" flow by removing the Unit Type selection, defaulting to a standard unit internally while keeping the UI clean.

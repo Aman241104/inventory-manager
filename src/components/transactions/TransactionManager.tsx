@@ -113,7 +113,7 @@ export default function TransactionManager({
             {isEntryMode ? "New Transaction" : "Today's Activity"}
           </h1>
           <p className="text-slate-500">
-            {isEntryMode ? "Log a new fruit batch or sale." : "Track what's moving through your inventory today."}
+            {isEntryMode ? "Log a new fruit batch or sale." : "Track what&apos;s moving through your inventory today."}
           </p>
         </div>
         
@@ -126,7 +126,7 @@ export default function TransactionManager({
           ) : (
             <Button variant="outline" onClick={() => setIsEntryMode(false)} className="gap-2">
               <History size={18} />
-              View Today's List
+              View Today&apos;s List
             </Button>
           )}
         </div>

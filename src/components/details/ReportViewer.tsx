@@ -14,11 +14,14 @@ import {
   TrendingDown,
   Info,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Edit2
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getDetailedReport, deleteLot, deleteSale } from "@/app/actions/report";
+import { updatePurchase } from "@/app/actions/transaction";
+import { Modal } from "@/components/ui/Modal";
 import LedgerCard from "./LedgerCard";
 
 export default function ReportViewer({ products }: { products: any[] }) {
@@ -28,13 +31,23 @@ export default function ReportViewer({ products }: { products: any[] }) {
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'ledger'>('table');
   
+  // Edit Lot States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLot, setEditingLot] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    lotName: "",
+    quantity: "",
+    rate: "",
+    date: ""
+  });
+
   const [filters, setFilters] = useState({
     fromDate: "",
     toDate: "",
     productId: ""
   });
 
-  const fetchReport = async () => {
+  const fetchReport = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -50,11 +63,14 @@ export default function ReportViewer({ products }: { products: any[] }) {
       console.error(err);
     }
     setLoading(false);
-  };
+  }, [filters]);
 
   useEffect(() => {
-    fetchReport();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchReport();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchReport]);
 
   const toggleLot = (id: string) => {
     const newExpanded = new Set(expandedLots);
@@ -80,6 +96,36 @@ export default function ReportViewer({ products }: { products: any[] }) {
       const res = await deleteSale(id);
       if (res.success) fetchReport();
     }
+  };
+
+  const handleOpenEditLot = (e: React.MouseEvent, lot: any) => {
+    e.stopPropagation();
+    setEditingLot(lot);
+    setEditFormData({
+      lotName: lot.lotName,
+      quantity: lot.purchasedQty.toString(),
+      rate: lot.purchasedRate.toString(),
+      date: lot.date
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateLot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const res = await updatePurchase(editingLot.lotId, {
+      lotName: editFormData.lotName,
+      quantity: Number(editFormData.quantity),
+      rate: Number(editFormData.rate),
+      date: editFormData.date
+    });
+    if (res.success) {
+      setIsEditModalOpen(false);
+      fetchReport();
+    } else {
+      alert("Failed to update lot");
+    }
+    setLoading(false);
   };
 
   return (
@@ -209,13 +255,23 @@ export default function ReportViewer({ products }: { products: any[] }) {
                         </div>
                         <div className="text-[9px] font-black uppercase text-slate-400">Current Stock</div>
                       </td>
-                      <td className="px-4 py-5 text-center no-print">
-                        <button 
-                          onClick={(e) => handleDeleteLot(e, row.lotId)}
-                          className="p-1.5 text-slate-300 hover:text-rose-600 transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <td className="px-4 py-4 text-center no-print">
+                        <div className="flex items-center justify-center gap-1 no-print">
+                          <button 
+                            onClick={(e) => handleOpenEditLot(e, row)}
+                            className="p-1.5 text-slate-300 hover:text-indigo-600 transition-colors"
+                            title="Edit Batch"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={(e) => handleDeleteLot(e, row.lotId)}
+                            className="p-1.5 text-slate-300 hover:text-rose-600 transition-colors"
+                            title="Delete Batch"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     

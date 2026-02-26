@@ -99,17 +99,57 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
 
     const savedSale = await sale.save();
 
-    revalidatePath("/transactions");
-    revalidatePath("/details");
-    revalidatePath("/");
+        revalidatePath("/details");
+        revalidatePath("/");
+        return { success: true, isExtraSold, data: JSON.parse(JSON.stringify(savedSale)) };
+      } catch (error) {
+        console.error("Sale error detail:", error);
+        return { success: false, error: "Failed to record sale" };
+      }
+    }
+    
+    export async function updateSale(id: string, data: Partial<ISale>) {
+      try {
+        await connectDB();
+        const updateData: any = { ...data };
+        
+        if (data.productId) updateData.productId = new mongoose.Types.ObjectId(data.productId);
+        if (data.customerId) updateData.customerId = new mongoose.Types.ObjectId(data.customerId);
+        if (data.purchaseId) updateData.purchaseId = new mongoose.Types.ObjectId(data.purchaseId);
+        if (data.date) updateData.date = new Date(data.date);
+    
+        await Sale.findByIdAndUpdate(id, updateData);
+        
+        revalidatePath("/transactions");
+        revalidatePath("/details");
+        revalidatePath("/");
+        return { success: true };
+      } catch (error) {
+        console.error("Update sale error:", error);
+        return { success: false, error: "Failed to update sale" };
+      }
+    }
 
-    return { success: true, isExtraSold, data: JSON.parse(JSON.stringify(savedSale)) };
-  } catch (error) {
-    console.error("Sale error detail:", error);
-    return { success: false, error: "Failed to record sale" };
-  }
-}
-
+    export async function updatePurchase(id: string, data: Partial<IPurchase>) {
+      try {
+        await connectDB();
+        const updateData: any = { ...data };
+        
+        if (data.productId) updateData.productId = new mongoose.Types.ObjectId(data.productId);
+        if (data.vendorId) updateData.vendorId = new mongoose.Types.ObjectId(data.vendorId);
+        if (data.date) updateData.date = new Date(data.date);
+    
+        await Purchase.findByIdAndUpdate(id, updateData);
+        
+        revalidatePath("/transactions");
+        revalidatePath("/details");
+        revalidatePath("/");
+        return { success: true };
+      } catch (error) {
+        console.error("Update purchase error:", error);
+        return { success: false, error: "Failed to update batch" };
+      }
+    }
 /**
  * On-the-go Vendor creation
  */

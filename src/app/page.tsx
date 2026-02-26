@@ -150,7 +150,6 @@ export default async function HomePage() {
                           <td className="px-6 py-5 border-r border-slate-100 bg-emerald-50/5">
                             <div className="flex items-center gap-1">
                               <span className="text-base font-black text-emerald-600">{lot.totalPurchased}</span>
-                              <span className="text-[10px] text-slate-400 font-bold uppercase">{lot.unitType}</span>
                             </div>
                             <div className="w-20 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
                               <div className="h-full bg-emerald-500" style={{ width: `${soldPercentage}%` }} />

@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
+import * as dotenv from "dotenv";
 
 async function run() {
   const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/inventory-manger";
 
   // Need to dynamically import dot env since NEXT runs it
-  require("dotenv").config({ path: ".env.local" });
+  dotenv.config({ path: ".env.local" });
 
   await mongoose.connect(process.env.MONGODB_URI || MONGODB_URI);
 

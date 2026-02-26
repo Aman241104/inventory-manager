@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Calendar, Filter, X, UserPlus, Apple, ShoppingCart, TrendingUp, History, Info, CheckCircle2 } from "lucide-react";
+import { Plus, Calendar, Filter, X, UserPlus, Apple, ShoppingCart, TrendingUp, History, Info, CheckCircle2, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
-import { addPurchase, addVendorAction, addProductAction } from "@/app/actions/transaction";
+import { addPurchase, addVendorAction, addProductAction, updatePurchase } from "@/app/actions/transaction";
+import { deleteLot } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function BuyList({ 
@@ -30,6 +31,16 @@ export default function BuyList({
   const [vendors, setVendors] = useState(initialVendors);
   const [products, setProducts] = useState(initialProducts);
   
+  // Edit Lot States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLot, setEditingLot] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    lotName: "",
+    quantity: "",
+    rate: "",
+    date: ""
+  });
+
   // Filter states
   const [fromDate, setFromDate] = useState(searchParams.get("fromDate") || "");
   const [toDate, setToDate] = useState(searchParams.get("toDate") || "");
@@ -110,6 +121,46 @@ export default function BuyList({
     setLoading(false);
   };
 
+  const handleOpenEdit = (purchase: any) => {
+    setEditingLot(purchase);
+    setEditFormData({
+      lotName: purchase.lotName,
+      quantity: purchase.quantity.toString(),
+      rate: purchase.rate.toString(),
+      date: new Date(purchase.date).toISOString().split('T')[0]
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const res = await updatePurchase(editingLot._id, {
+      lotName: editFormData.lotName,
+      quantity: Number(editFormData.quantity),
+      rate: Number(editFormData.rate),
+      date: editFormData.date
+    });
+    if (res.success) {
+      setIsEditModalOpen(false);
+      if (onSuccess) onSuccess();
+      router.refresh();
+    } else {
+      alert("Failed to update");
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure? This will delete the ENTIRE batch and all its sales!")) {
+      const res = await deleteLot(id);
+      if (res.success) {
+        if (onSuccess) onSuccess();
+        router.refresh();
+      }
+    }
+  };
+
   const handleQuickAddVendor = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -165,7 +216,7 @@ export default function BuyList({
               >
                 <option value="">Select Fruit</option>
                 {products.filter(p => p.isActive).map(p => (
-                  <option key={p._id} value={p._id}>{p.name} ({p.unitType})</option>
+                  <option key={p._id} value={p._id}>{p.name}</option>
                 ))}
               </select>
             </div>
@@ -250,9 +301,6 @@ export default function BuyList({
                   <div>
                     <div className="text-2xl font-black text-emerald-900">{selectedProduct?.name}</div>
                     <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{formData.lotName}</p>
-                  </div>
-                  <div className="bg-white/80 px-2 py-1 rounded-lg border border-emerald-100 text-emerald-600 font-bold text-xs">
-                    {selectedProduct?.unitType}
                   </div>
                 </div>
 
@@ -398,6 +446,7 @@ export default function BuyList({
                     <th className="px-4 py-3 text-sm font-semibold text-slate-600">Quantity</th>
                     <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Rate</th>
                     <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-right">Total</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-slate-600 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -411,9 +460,19 @@ export default function BuyList({
                         <div className="text-[10px] text-indigo-500 uppercase font-black">{p.lotName}</div>
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-600">{p.vendorId?.name}</td>
-                      <td className="px-4 py-4 text-sm font-semibold text-indigo-600">{p.quantity} <span className="text-[10px] text-slate-400 font-bold">{p.productId?.unitType}</span></td>
+                      <td className="px-4 py-4 text-sm font-semibold text-indigo-600">{p.quantity}</td>
                       <td className="px-4 py-4 text-sm text-right">₹{p.rate}</td>
                       <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{p.quantity * p.rate}</td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleOpenEdit(p)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                            <Edit2 size={16} />
+                          </button>
+                          <button onClick={() => handleDelete(p._id)} className="p-1 text-slate-400 hover:text-rose-600 transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -426,6 +485,34 @@ export default function BuyList({
       {/* Record Purchase Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Record New Purchase">
         {renderForm(true)}
+      </Modal>
+
+      {/* Edit Purchase Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Purchase Batch">
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lot Name</label>
+              <input type="text" required value={editFormData.lotName} onChange={(e) => setEditFormData({...editFormData, lotName: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity</label>
+              <input type="number" required value={editFormData.quantity} onChange={(e) => setEditFormData({...editFormData, quantity: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rate</label>
+              <input type="number" required value={editFormData.rate} onChange={(e) => setEditFormData({...editFormData, rate: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+              <input type="date" required value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} className="w-full px-4 py-2 border rounded-lg" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading}>{loading ? "Saving..." : "Update Batch"}</Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Quick Add Modals for Modal Mode */}
