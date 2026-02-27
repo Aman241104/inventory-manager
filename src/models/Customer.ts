@@ -6,6 +6,7 @@ const CustomerSchema = new Schema<ICustomer>(
     name: { type: String, required: true },
     contact: { type: String },
     isActive: { type: Boolean, default: true, index: true },
+    isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );

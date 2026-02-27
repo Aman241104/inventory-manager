@@ -75,6 +75,10 @@ export default function TransactionManager({
     setTimeout(() => window.location.reload(), 300);
   };
 
+  const activeProducts = products.filter(p => p.isActive);
+  const activeVendors = vendors.filter(v => v.isActive);
+  const activeCustomers = customers.filter(c => c.isActive);
+
   return (
     <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
@@ -135,24 +139,24 @@ export default function TransactionManager({
         {activeType === "buy" ? (
           <BuyList
             initialPurchases={initialPurchases}
-            products={products}
-            vendors={vendors}
+            products={activeProducts}
+            vendors={activeVendors}
             isInline={true}
             onSuccess={handleSuccess}
           />
         ) : activeType === "sell" ? (
           <SellList
             initialSales={initialSales}
-            products={products}
-            customers={customers}
+            products={activeProducts}
+            customers={activeCustomers}
             isInline={true}
             onSuccess={handleSuccess}
           />
         ) : activeType === "bulk" ? (
           <BulkEntry
-            products={products}
-            vendors={vendors}
-            customers={customers}
+            products={activeProducts}
+            vendors={activeVendors}
+            customers={activeCustomers}
             onSuccess={handleSuccess}
           />
         ) : (
@@ -164,8 +168,8 @@ export default function TransactionManager({
               </h3>
               <BuyList
                 initialPurchases={[]}
-                products={products}
-                vendors={vendors}
+                products={activeProducts}
+                vendors={activeVendors}
                 isInline={true}
                 onSuccess={handleSuccess}
               />
@@ -177,8 +181,8 @@ export default function TransactionManager({
               </h3>
               <SellList
                 initialSales={[]}
-                products={products}
-                customers={customers}
+                products={activeProducts}
+                customers={activeCustomers}
                 isInline={true}
                 onSuccess={handleSuccess}
               />

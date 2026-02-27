@@ -7,6 +7,7 @@ const VendorSchema = new Schema<IVendor>(
     contact: { type: String },
     address: { type: String },
     isActive: { type: Boolean, default: true, index: true },
+    isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );

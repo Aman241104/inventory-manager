@@ -12,7 +12,7 @@ export async function getVendors() {
   if (USE_MOCK) return { success: true, data: MOCK_VENDORS };
   try {
     await connectDB();
-    const vendors = await Vendor.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+    const vendors = await Vendor.find({ isDeleted: false }).sort({ createdAt: -1 }).lean();
     
     const vendorsWithStats = await Promise.all(vendors.map(async (v: any) => {
       const activeLots = await Purchase.countDocuments({ vendorIds: v._id, isDeleted: false });
@@ -62,18 +62,8 @@ export async function deleteVendor(id: string) {
   try {
     await connectDB();
 
-    // Check for existing transactions
-    const hasPurchases = await Purchase.findOne({ vendorIds: id, isDeleted: false });
-    
-    if (hasPurchases) {
-      return { 
-        success: false, 
-        error: "Cannot delete vendor. They have active purchase records. Delete batches first." 
-      };
-    }
-
-    // Soft delete if no transactions
-    await Vendor.findByIdAndUpdate(id, { isActive: false });
+    // Soft delete
+    await Vendor.findByIdAndUpdate(id, { isDeleted: true });
     
     try {
       revalidatePath("/vendors");

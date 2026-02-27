@@ -4,6 +4,7 @@ export interface IProduct extends Document {
   name: string;
   unitType: 'Box' | 'Kg' | 'Lot';
   isActive: boolean;
+  isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -13,6 +14,7 @@ export interface IVendor extends Document {
   contact: string;
   address?: string;
   isActive: boolean;
+  isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,7 @@ export interface ICustomer extends Document {
   name: string;
   contact: string;
   isActive: boolean;
+  isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
