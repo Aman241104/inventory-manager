@@ -12,10 +12,10 @@ import { IPurchase, ISale } from "@/types";
 import mongoose, { Types } from "mongoose";
 
 /**
- * Adds a purchase. If a purchase for the same product, same date, and same lot name 
- * exists, it combines them (merges into a Lot).
+ * Adds a purchase. Automatically clubs purchases for the same product on the same day 
+ * into one Batch/Lot.
  */
-export async function addPurchase(data: Partial<IPurchase> & { date: string | Date }) {
+export async function addPurchase(data: Partial<IPurchase> & { date: string | Date; vendorId?: string }) {
   try {
     await connectDB();
 
@@ -25,26 +25,48 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
     const endOfDay = new Date(purchaseDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Find existing purchase for same product, same lot name on the same day
+    // Get vendor info
+    const vendor = data.vendorId ? await Vendor.findById(data.vendorId) : null;
+    const vendorName = vendor ? vendor.name : "Unknown Vendor";
+
+    // Find existing lot for same product on the same day
     const existingLot = await Purchase.findOne({
       productId: new mongoose.Types.ObjectId(data.productId),
-      lotName: data.lotName,
       date: { $gte: startOfDay, $lte: endOfDay },
       isDeleted: false
     });
 
     if (existingLot) {
+      // Clubbing logic: Add quantity, update rate (maybe weighted average or just latest?)
+      // User requested "clubbing" so they see 100 total.
       existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
+      
+      // Update rate to the latest one
       if (data.rate !== undefined) {
         existingLot.rate = data.rate;
       }
+
+      // Add vendor if not already present
+      if (data.vendorId && !existingLot.vendorIds.some((id: any) => id.toString() === data.vendorId)) {
+        existingLot.vendorIds.push(new mongoose.Types.ObjectId(data.vendorId));
+        existingLot.vendorNames.push(vendorName);
+      }
+
       existingLot.notes = (existingLot.notes ? existingLot.notes + "; " : "") + (data.notes || "");
       await existingLot.save();
     } else {
+      // Auto-generate lot name: LOT-[YYYYMMDD]-[PRODUCT_CODE]
+      const product = await Product.findById(data.productId);
+      const productPrefix = product ? product.name.substring(0, 3).toUpperCase() : "LOT";
+      const dateStr = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
+      const lotName = `${productPrefix}-${dateStr}`;
+
       const purchase = new Purchase({
         ...data,
         productId: new mongoose.Types.ObjectId(data.productId),
-        vendorId: new mongoose.Types.ObjectId(data.vendorId),
+        vendorIds: data.vendorId ? [new mongoose.Types.ObjectId(data.vendorId)] : [],
+        vendorNames: vendor ? [vendorName] : [],
+        lotName: lotName,
         date: purchaseDate
       });
       await purchase.save();
@@ -130,27 +152,172 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
       }
     }
 
-    export async function updatePurchase(id: string, data: Partial<IPurchase>) {
+    export async function updatePurchase(id: string, data: Partial<IPurchase> & { vendorId?: string }) {
       try {
         await connectDB();
         const updateData: any = { ...data };
         
         if (data.productId) updateData.productId = new mongoose.Types.ObjectId(data.productId);
-        if (data.vendorId) updateData.vendorId = new mongoose.Types.ObjectId(data.vendorId);
         if (data.date) updateData.date = new Date(data.date);
+        
+        // If someone still passes vendorId, we treat it as vendorIds: [vendorId]
+        if ((data as any).vendorId) {
+          updateData.vendorIds = [new mongoose.Types.ObjectId((data as any).vendorId)];
+          delete updateData.vendorId;
+        }
     
         await Purchase.findByIdAndUpdate(id, updateData);
         
-        revalidatePath("/transactions");
-        revalidatePath("/details");
-        revalidatePath("/");
-        return { success: true };
-      } catch (error) {
-        console.error("Update purchase error:", error);
-        return { success: false, error: "Failed to update batch" };
-      }
-    }
-/**
+            revalidatePath("/transactions");
+            revalidatePath("/details");
+            revalidatePath("/");
+            return { success: true };
+          } catch (error) {
+            console.error("Update purchase error:", error);
+            return { success: false, error: "Failed to update batch" };
+          }
+        }
+        
+        /**
+         * Automatically clears remaining stock as spoilage/damage.
+         */
+        export async function writeOffLot(lotId: string) {
+          try {
+            await connectDB();
+            
+            const lot = await Purchase.findById(lotId);
+            if (!lot) return { success: false, error: "Lot not found" };
+        
+            // Calculate current available
+            const previousSales = await Sale.aggregate([
+              { $match: { purchaseId: new mongoose.Types.ObjectId(lotId), isDeleted: false } },
+              { $group: { _id: null, total: { $sum: "$quantity" } } }
+            ]);
+            const soldSoFar = previousSales[0]?.total || 0;
+            const remaining = lot.quantity - soldSoFar;
+        
+            if (remaining <= 0) return { success: false, error: "No stock to write off" };
+        
+            // Ensure a "SPOILAGE" customer exists
+            let spoilageCustomer = await Customer.findOne({ name: "SPOILAGE / LOSS" });
+            if (!spoilageCustomer) {
+              spoilageCustomer = await Customer.create({ 
+                name: "SPOILAGE / LOSS", 
+                contact: "INTERNAL",
+                isActive: true 
+              });
+            }
+        
+            const sale = new Sale({
+              productId: lot.productId,
+              customerId: spoilageCustomer._id,
+              purchaseId: lot._id,
+              quantity: remaining,
+              rate: 0,
+              date: new Date(),
+              notes: "Automatic write-off for damaged/rotten goods",
+              isExtraSold: false
+            });
+        
+            await sale.save();
+        
+                revalidatePath("/details");
+                revalidatePath("/");
+                return { success: true };
+              } catch (error) {
+                console.error("Write off error:", error);
+                return { success: false, error: "Failed to write off stock" };
+              }
+            }
+            
+            /**
+             * Bulk add transactions (Sales or Purchases) for high-volume traders.
+             */
+            export async function bulkAddTransactions(entries: any[]) {
+              try {
+                await connectDB();
+                
+                const results = [];
+                for (const data of entries) {
+                  if (data.type === "sell") {
+                    const lotId = new mongoose.Types.ObjectId(data.purchaseId);
+                    const lot = await Purchase.findById(lotId);
+                    
+                    if (!lot) continue;
+            
+                    const previousSales = await Sale.aggregate([
+                      { $match: { purchaseId: lot._id, isDeleted: false } },
+                      { $group: { _id: null, total: { $sum: "$quantity" } } }
+                    ]);
+            
+                    const soldSoFar = previousSales[0]?.total || 0;
+                    const currentAvailable = lot.quantity - soldSoFar;
+                    const isExtraSold = Number(data.quantity) > currentAvailable;
+            
+                    const sale = new Sale({
+                      ...data,
+                      productId: new mongoose.Types.ObjectId(data.productId),
+                      customerId: new mongoose.Types.ObjectId(data.customerId),
+                      purchaseId: lotId,
+                      date: new Date(data.date),
+                      isExtraSold
+                    });
+            
+                    results.push(await sale.save());
+                  } else {
+                    // Handle Buy (Purchase)
+                    const purchaseDate = new Date(data.date);
+                    const startOfDay = new Date(purchaseDate);
+                    startOfDay.setHours(0, 0, 0, 0);
+                    const endOfDay = new Date(purchaseDate);
+                    endOfDay.setHours(23, 59, 59, 999);
+            
+                            const vendor = data.vendorId ? await Vendor.findById(data.vendorId) : null;
+                            const vendorName = vendor ? vendor.name : "Unknown Vendor";
+                    
+                            const existingLot = await Purchase.findOne({
+                              productId: new mongoose.Types.ObjectId(data.productId),
+                              date: { $gte: startOfDay, $lte: endOfDay },
+                              isDeleted: false
+                            });            
+                    if (existingLot) {
+                      existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
+                      if (data.rate !== undefined) existingLot.rate = data.rate;
+                      if (data.vendorId && !existingLot.vendorIds.some((id: any) => id.toString() === data.vendorId)) {
+                        existingLot.vendorIds.push(new mongoose.Types.ObjectId(data.vendorId));
+                        existingLot.vendorNames.push(vendorName);
+                      }
+                      results.push(await existingLot.save());
+                    } else {
+                      const product = await Product.findById(data.productId);
+                      const productPrefix = product ? product.name.substring(0, 3).toUpperCase() : "LOT";
+                      const dateStr = startOfDay.toISOString().split('T')[0].replace(/-/g, '');
+                      const lotName = `${productPrefix}-${dateStr}`;
+            
+                      const purchase = new Purchase({
+                        ...data,
+                        productId: new mongoose.Types.ObjectId(data.productId),
+                        vendorIds: data.vendorId ? [new mongoose.Types.ObjectId(data.vendorId)] : [],
+                        vendorNames: vendor ? [vendorName] : [],
+                        lotName: lotName,
+                        date: purchaseDate
+                      });
+                      results.push(await purchase.save());
+                    }
+                  }
+                }
+            
+                revalidatePath("/transactions");
+                revalidatePath("/details");
+                revalidatePath("/");
+                return { success: true, count: results.length };
+              } catch (error) {
+                console.error("Bulk transaction error:", error);
+                return { success: false, error: "Failed to process bulk entries" };
+              }
+            }
+            
+            /**
  * On-the-go Vendor creation
  */
 export async function addVendorAction(name: string, contact: string) {
@@ -237,7 +404,7 @@ export async function getPurchases(fromDate?: string, toDate?: string) {
     }
     const purchases = await Purchase.find(query)
       .populate("productId", "name unitType")
-      .populate("vendorId", "name")
+      .populate("vendorIds", "name")
       .sort({ date: -1 })
       .lean();
     return { success: true, data: JSON.parse(JSON.stringify(purchases)) };

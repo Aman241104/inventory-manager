@@ -27,7 +27,8 @@ export interface ICustomer extends Document {
 
 export interface IPurchase extends Document {
   productId: Types.ObjectId | any;
-  vendorId: Types.ObjectId | any;
+  vendorNames: string[];
+  vendorIds: (Types.ObjectId | any)[];
   lotName: string; // e.g., "Batch 1", "Lot A"
   quantity: number;
   rate: number;

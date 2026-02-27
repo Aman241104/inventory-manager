@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, AlertTriangle, CheckCircle2, Calendar, Filter, X, UserPlus, TrendingUp, Apple, History, BadgeDollarSign, Edit2, Trash2 } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Calendar, Filter, X, UserPlus, TrendingUp, Apple, History, BadgeDollarSign, Edit2, Trash2, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { Combobox } from "@/components/ui/Combobox";
 import { addSale, getLotsForProduct, addCustomerAction, addProductAction, updateSale } from "@/app/actions/transaction";
 import { deleteSale } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -28,6 +29,7 @@ export default function SellList({
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pinnedFields, setPinnedFields] = useState<Set<string>>(new Set());
 
   const [customers, setCustomers] = useState(initialCustomers);
   const [products, setProducts] = useState(initialProducts);
@@ -61,7 +63,11 @@ export default function SellList({
   const [newProduct, setNewProduct] = useState({ name: "", unitType: "Box" });
   const [successMessage, setSuccessMessage] = useState("");
 
-  const fruitSelectRef = React.useRef<HTMLSelectElement>(null);
+  const fruitSelectRef = React.useRef<HTMLInputElement>(null);
+  const customerSelectRef = React.useRef<HTMLInputElement>(null);
+  const lotSelectRef = React.useRef<HTMLSelectElement>(null);
+  const qtyInputRef = React.useRef<HTMLInputElement>(null);
+  const rateInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (successMessage) {
@@ -75,6 +81,18 @@ export default function SellList({
       fruitSelectRef.current?.focus();
     }
   }, [isModalOpen, isInline]);
+
+  const handleKeyDown = (e: React.KeyboardEvent, nextRef?: React.RefObject<any>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (nextRef) {
+        nextRef.current?.focus();
+      } else {
+        // If no nextRef, it's the last field, so submit
+        handleSubmit(null, true);
+      }
+    }
+  };
 
   const handleApplyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -143,24 +161,37 @@ export default function SellList({
         if (!addAnother) {
           setIsModalOpen(false);
         }
+        
+        // Pinned Logic: Only clear fields that are NOT pinned
         setFormData({
-          productId: addAnother ? formData.productId : "",
-          customerId: addAnother ? formData.customerId : "",
-          purchaseId: addAnother ? formData.purchaseId : "",
-          quantity: "",
-          rate: "",
-          date: new Date().toISOString().split('T')[0],
+          productId: pinnedFields.has("product") ? formData.productId : "",
+          customerId: pinnedFields.has("customer") ? formData.customerId : "",
+          purchaseId: pinnedFields.has("product") ? formData.purchaseId : "",
+          quantity: "", // Quantity is always cleared
+          rate: pinnedFields.has("rate") ? formData.rate : "",
+          date: formData.date, // Date is always sticky
           notes: ""
         });
+
         router.refresh();
         if (onSuccess) onSuccess();
         if (!addAnother) {
           if (!isInline) setTimeout(() => window.location.reload(), 500);
           else router.refresh();
         } else {
-          getLotsForProduct(formData.productId).then(res => {
-            if (res.success) setAvailableLots(res.data);
-          });
+          if (formData.productId) {
+            getLotsForProduct(formData.productId).then(res => {
+              if (res.success) setAvailableLots(res.data);
+            });
+          }
+          // Intelligently focus based on what's cleared
+          if (!pinnedFields.has("product")) {
+            fruitSelectRef.current?.focus();
+          } else if (!pinnedFields.has("customer")) {
+            customerSelectRef.current?.focus();
+          } else {
+            qtyInputRef.current?.focus();
+          }
         }
       } else {
         alert(result.error || "Failed to save sale");
@@ -236,6 +267,13 @@ export default function SellList({
     setLoading(false);
   };
 
+  const togglePinnedField = (field: string) => {
+    const newPinned = new Set(pinnedFields);
+    if (newPinned.has(field)) newPinned.delete(field);
+    else newPinned.add(field);
+    setPinnedFields(newPinned);
+  };
+
   const isExtraSold = selectedLot && Number(formData.quantity) > selectedLot.availableQty;
 
   const renderForm = (isModal = true) => (
@@ -257,17 +295,14 @@ export default function SellList({
                   <Apple size={10} /> Quick Add
                 </button>
               </label>
-              <select
+              <Combobox
                 ref={fruitSelectRef}
-                required value={formData.productId}
-                onChange={(e) => setFormData({ ...formData, productId: e.target.value, purchaseId: "" })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              >
-                <option value="">Select Fruit</option>
-                {products.filter(p => p.isActive).map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
-                ))}
-              </select>
+                options={products.filter(p => p.isActive)}
+                value={formData.productId}
+                onChange={(val) => setFormData({ ...formData, productId: val, purchaseId: "" })}
+                onKeyDown={(e) => handleKeyDown(e, customerSelectRef)}
+                placeholder="Select Fruit..."
+              />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
@@ -276,26 +311,26 @@ export default function SellList({
                   <UserPlus size={10} /> Quick Add
                 </button>
               </label>
-              <select
-                required value={formData.customerId}
-                onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              >
-                <option value="">Select Customer</option>
-                {customers.filter(c => c.isActive).map(c => (
-                  <option key={c._id} value={c._id}>{c.name}</option>
-                ))}
-              </select>
+              <Combobox
+                ref={customerSelectRef}
+                options={customers.filter(c => c.isActive)}
+                value={formData.customerId}
+                onChange={(val) => setFormData({ ...formData, customerId: val })}
+                onKeyDown={(e) => handleKeyDown(e, lotSelectRef)}
+                placeholder="Select Customer..."
+              />
             </div>
           </div>
 
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Select Batch (Lot) *</label>
             <select
+              ref={lotSelectRef}
               required
               value={formData.purchaseId}
               disabled={!formData.productId}
               onChange={(e) => setFormData({ ...formData, purchaseId: e.target.value })}
+              onKeyDown={(e) => handleKeyDown(e, qtyInputRef)}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-50"
             >
               <option value="">{formData.productId ? "Choose a lot..." : "Select product first"}</option>
@@ -314,17 +349,26 @@ export default function SellList({
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantity</label>
               <input
+                ref={qtyInputRef}
                 type="number" required min="0.0001" step="any" value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                onKeyDown={(e) => handleKeyDown(e, rateInputRef)}
                 className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${isExtraSold ? "border-rose-300 focus:ring-rose-500" : "border-slate-200 focus:ring-indigo-500"
                   }`}
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Selling Rate</label>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+                Selling Rate
+                <button type="button" onClick={() => togglePinnedField("rate")} className={pinnedFields.has("rate") ? "text-indigo-600" : "text-slate-300"}>
+                  {pinnedFields.has("rate") ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+                </button>
+              </label>
               <input
-                type="number" required min="0.0001" step="any" value={formData.rate}
+                ref={rateInputRef}
+                type="number" required min="0" step="any" value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
+                onKeyDown={(e) => handleKeyDown(e)}
                 className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${selectedLot && Number(formData.rate) > 0 && Number(formData.rate) < selectedLot.rate
                   ? "border-rose-300 text-rose-600 focus:ring-rose-500"
                   : "border-slate-200 focus:ring-indigo-500"
@@ -606,11 +650,11 @@ export default function SellList({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity</label>
-              <input type="number" required value={editFormData.quantity} onChange={(e) => setEditFormData({ ...editFormData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="number" required min="0.0001" step="any" value={editFormData.quantity} onChange={(e) => setEditFormData({ ...editFormData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rate</label>
-              <input type="number" required value={editFormData.rate} onChange={(e) => setEditFormData({ ...editFormData, rate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="number" required min="0" step="any" value={editFormData.rate} onChange={(e) => setEditFormData({ ...editFormData, rate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>

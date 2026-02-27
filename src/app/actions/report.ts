@@ -64,7 +64,7 @@ export async function getDetailedReport(filters: {
     // Get all lots matching filters
     const lots = await Purchase.find(query)
       .populate("productId", "name unitType")
-      .populate("vendorId", "name")
+      .populate("vendorIds", "name")
       .sort({ date: -1 })
       .lean();
 
@@ -92,7 +92,12 @@ export async function getDetailedReport(filters: {
           productName: lot.productId?.name || "Deleted Product",
           unitType: lot.productId?.unitType || "N/A",
           lotName: lot.lotName || "Unnamed Batch",
-          vendorName: lot.vendorId?.name || "N/A",
+          vendorName: lot.vendorNames && lot.vendorNames.length > 0 
+            ? lot.vendorNames.join(", ") 
+            : (lot.vendorIds && lot.vendorIds.length > 0 
+                ? lot.vendorIds.map((v: any) => v.name || "Unknown").join(", ") 
+                : "N/A"),
+          vendorNames: lot.vendorNames || [],
           purchasedQty: lot.quantity || 0,
           purchasedRate: lot.rate || 0,
           purchasedTotal: lot.totalAmount || (lot.quantity * lot.rate) || 0,

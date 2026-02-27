@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getProducts } from "@/app/actions/product";
 import ReportViewer from "@/components/details/ReportViewer";
 
@@ -11,9 +12,11 @@ export default async function DetailsPage() {
         <p className="text-slate-500">Analyze batches, transactions, and stock in detail.</p>
       </div>
       
-      <ReportViewer 
-        products={productsRes.success && productsRes.data ? productsRes.data : []} 
-      />
+      <Suspense fallback={<div className="p-12 text-center text-slate-400">Loading Detailed Report...</div>}>
+        <ReportViewer 
+          products={productsRes.success && productsRes.data ? productsRes.data : []} 
+        />
+      </Suspense>
     </div>
   );
 }

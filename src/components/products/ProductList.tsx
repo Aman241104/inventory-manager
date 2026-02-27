@@ -73,7 +73,7 @@ export default function ProductList({ initialProducts }: ProductListProps) {
       if (result.success) {
         window.location.reload();
       } else {
-        alert("Failed to delete product. It might be linked to transactions.");
+        alert(result.error || "Failed to delete product.");
       }
     }
   };
@@ -100,6 +100,7 @@ export default function ProductList({ initialProducts }: ProductListProps) {
               <input 
                 type="text" 
                 placeholder="Search products..." 
+                autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-64"

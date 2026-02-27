@@ -5,13 +5,15 @@ import { getCustomers } from "@/app/actions/customer";
 import { getPurchases, getSales } from "@/app/actions/transaction";
 import { getDashboardStats } from "@/app/actions/dashboard";
 import TransactionManager from "@/components/transactions/TransactionManager";
+import WriteOffButton from "@/components/dashboard/WriteOffButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   Package,
   TrendingUp,
   TrendingDown,
   Clock,
-  History
+  History,
+  AlertTriangle
 } from "lucide-react";
 
 export default async function HomePage() {
@@ -34,6 +36,12 @@ export default async function HomePage() {
   ]);
 
   const lotSummaries = statsRes.success && statsRes.data ? statsRes.data.lotSummaries : [];
+  
+  // Sort by age: Oldest batches at the top
+  const sortedLots = [...lotSummaries].sort((a: any, b: any) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
+
   const maxSales = Math.max(0, ...lotSummaries.map((lot: any) => lot.sales.length));
 
   const calculateAge = (dateStr: string) => {
@@ -91,7 +99,58 @@ export default async function HomePage() {
         </div>
       )}
 
-      {/* 3. Direct Stock Ledger (The Mathematics) */}
+      {/* 3. Operational Alerts */}
+      {sortedLots.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Missing Sales Check */}
+          {sortedLots.filter((l: any) => l.remainingStock > 0 && l.remainingStock <= 5).length > 0 && (
+            <Card className="border-amber-100 bg-amber-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-black text-amber-800 flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-500" />
+                  POTENTIAL MISSING SALES
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-amber-700/70 mb-4">These batches have very low stock. Did you forget to record a final sale?</p>
+                <div className="space-y-2">
+                  {sortedLots.filter((l: any) => l.remainingStock > 0 && l.remainingStock <= 5).map((l: any) => (
+                    <div key={l.lotId} className="flex justify-between items-center bg-white p-2 rounded-lg border border-amber-100 shadow-sm">
+                      <span className="text-xs font-bold text-slate-700">{l.productName} ({l.lotName})</span>
+                      <span className="text-xs font-black text-amber-600">{l.remainingStock} Left</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Aging Stock Check */}
+          {sortedLots.filter((l: any) => calculateAge(l.date) >= 3 && l.remainingStock > 0).length > 0 && (
+            <Card className="border-rose-100 bg-rose-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-black text-rose-800 flex items-center gap-2">
+                  <Clock size={16} className="text-rose-500" />
+                  AGING STOCK ALERT
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-rose-700/70 mb-4">These batches are older than 3 days. Prioritize selling these first.</p>
+                <div className="space-y-2">
+                  {sortedLots.filter((l: any) => calculateAge(l.date) >= 3 && l.remainingStock > 0).map((l: any) => (
+                    <div key={l.lotId} className="flex justify-between items-center bg-white p-2 rounded-lg border border-rose-100 shadow-sm">
+                      <span className="text-xs font-bold text-slate-700">{l.productName} ({l.lotName})</span>
+                      <span className="text-xs font-black text-rose-600">{calculateAge(l.date)} Days Old</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* 4. Direct Stock Ledger (The Mathematics) */}
       <div className="space-y-4">
         <div className="px-2">
           <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
@@ -122,12 +181,12 @@ export default async function HomePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {lotSummaries.length === 0 ? (
+                  {sortedLots.length === 0 ? (
                     <tr>
                       <td colSpan={maxSales + 4} className="px-6 py-12 text-center text-slate-400 italic font-medium">No active fruit batches found.</td>
                     </tr>
                   ) : (
-                    lotSummaries.map((lot: any) => {
+                    sortedLots.map((lot: any) => {
                       const age = calculateAge(lot.date);
                       const soldQty = lot.totalPurchased - lot.remainingStock;
                       const soldPercentage = Math.min(100, Math.max(0, (soldQty / lot.totalPurchased) * 100));
@@ -135,8 +194,15 @@ export default async function HomePage() {
                       return (
                         <tr key={lot.lotId} className="hover:bg-slate-50 transition-colors group">
                           <td className="px-6 py-5 text-sm font-black text-slate-800 border-r border-slate-100 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
-                            {lot.productName}
-                            <div className="text-[10px] text-indigo-500 uppercase font-black tracking-tight mt-0.5">{lot.lotName}</div>
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                {lot.productName}
+                                <div className="text-[10px] text-indigo-500 uppercase font-black tracking-tight mt-0.5">{lot.lotName}</div>
+                              </div>
+                              {lot.remainingStock > 0 && (
+                                <WriteOffButton lotId={lot.lotId} />
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-5 text-xs text-slate-500">
                             {age >= 3 ? (

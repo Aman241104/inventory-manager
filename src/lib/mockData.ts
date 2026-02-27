@@ -19,7 +19,9 @@ export const MOCK_PURCHASES = [
   { 
     _id: 'buy1', 
     productId: MOCK_PRODUCTS[0], 
-    vendorId: MOCK_VENDORS[0], 
+    vendorIds: [MOCK_VENDORS[0]], 
+    vendorNames: [MOCK_VENDORS[0].name],
+    lotName: 'KIW-20260227',
     quantity: 10, 
     rate: 800, 
     date: new Date(), 
@@ -28,7 +30,9 @@ export const MOCK_PURCHASES = [
   { 
     _id: 'buy2', 
     productId: MOCK_PRODUCTS[1], 
-    vendorId: MOCK_VENDORS[1], 
+    vendorIds: [MOCK_VENDORS[1]], 
+    vendorNames: [MOCK_VENDORS[1].name],
+    lotName: 'MAN-20260226',
     quantity: 20, 
     rate: 1200, 
     date: new Date(Date.now() - 86400000), 

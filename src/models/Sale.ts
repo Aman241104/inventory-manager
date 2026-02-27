@@ -7,7 +7,7 @@ const SaleSchema = new Schema<ISale>(
     customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
     purchaseId: { type: Schema.Types.ObjectId, ref: 'Purchase', required: true, index: true },
     quantity: { type: Number, required: true, min: 0.0001 },
-    rate: { type: Number, required: true, min: 0.0001 },
+    rate: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number },
     date: { type: Date, default: Date.now, index: true },
     notes: { type: String },
@@ -16,6 +16,10 @@ const SaleSchema = new Schema<ISale>(
   },
   { timestamps: true }
 );
+
+// Optimize for lot-wise sales aggregation
+SaleSchema.index({ purchaseId: 1, isDeleted: 1 });
+SaleSchema.index({ date: 1, isDeleted: 1 });
 
 // Middleware to calculate totalAmount before saving
 SaleSchema.pre('save', function () {

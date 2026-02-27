@@ -15,6 +15,8 @@ import {
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import GlobalSearch from "./GlobalSearch";
+import ShortcutHelp from "./ShortcutHelp";
 
 const navItems = [
   { label: "Today's Hub", href: "/", icon: Zap },
@@ -57,6 +59,10 @@ export default function Sidebar() {
 
           {/* Nav Items */}
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
+            <div className="px-1">
+              <GlobalSearch />
+            </div>
+
             <div className="space-y-2">
               <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Main Hub</p>
               {navItems.map((item) => {
@@ -113,16 +119,17 @@ export default function Sidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-800">
-            <div className="flex items-center gap-3 px-4 py-2">
+          <div className="p-4 border-t border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-3 px-2 py-2">
               <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
                 A
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden min-w-[100px]">
                 <p className="text-sm font-medium text-white truncate">Admin User</p>
                 <p className="text-xs text-slate-500 truncate">admin@fruit.com</p>
               </div>
             </div>
+            <ShortcutHelp />
           </div>
         </div>
       </aside>

@@ -26,11 +26,13 @@ Master lists for entities.
 #### **Purchases** (`purchases`)
 Transactional records of incoming stock.
 - `productId`: ObjectId (Ref: Product)
-- `vendorId`: ObjectId (Ref: Vendor)
+- `vendorIds`: Array of ObjectId (Ref: Vendor)
+- `vendorNames`: Array of String
+- `lotName`: String
 - `quantity`: Number
 - `rate`: Number
 - `date`: Date
-- *Logic*: Direct addition to stock.
+- *Logic*: Direct addition to stock. Batches on the same day for the same product are clubbed.
 
 #### **Sales** (`sales`)
 Transactional records of outgoing stock.

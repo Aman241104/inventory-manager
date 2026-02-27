@@ -14,7 +14,7 @@ export async function getProducts() {
   if (USE_MOCK) return { success: true, data: MOCK_PRODUCTS };
   try {
     await connectDB();
-    const products = await Product.find({}).sort({ createdAt: -1 }).lean();
+    const products = await Product.find({ isActive: true }).sort({ createdAt: -1 }).lean();
 
     const productsWithStats = await Promise.all(products.map(async (p: any) => {
       const lastPurchase = await Purchase.findOne({ productId: p._id, isDeleted: false }).sort({ date: -1 }).lean();
@@ -76,7 +76,21 @@ export async function deleteProduct(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
-    await Product.findByIdAndUpdate(id, { isActive: false });
+    
+    // Check for existing transactions
+    const hasPurchases = await Purchase.findOne({ productId: id, isDeleted: false });
+    const hasSales = await Sale.findOne({ productId: id, isDeleted: false });
+    
+    if (hasPurchases || hasSales) {
+      return { 
+        success: false, 
+        error: "Cannot delete product. It has active transactions. Please delete transactions first." 
+      };
+    }
+
+    // Hard delete if no transactions
+    await Product.findByIdAndDelete(id);
+    
     revalidatePath("/products");
     return { success: true };
   } catch (error) {

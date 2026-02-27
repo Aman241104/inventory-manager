@@ -20,7 +20,7 @@ Define Mongoose schemas in `src/models/` with appropriate validation and indexes
 ### 2.1 Schema Definitions
 - **Product**: Name (indexed), unitType, isActive, createdAt.
 - **Vendor/Customer**: Name, contact, isActive.
-- **Purchase**: productId (ref), vendorId (ref), quantity, rate, date, notes.
+- **Purchase**: productId (ref), vendorIds (ref array), vendorNames (array), lotName, quantity, rate, date, notes.
 - **Sale**: productId (ref), customerId (ref), quantity, rate, date, notes.
 
 **Best Practice**: Use `timestamps: true` for all schemas to track creation and updates.

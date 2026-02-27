@@ -5,6 +5,7 @@ import { Plus, Calendar, Filter, X, UserPlus, Apple, ShoppingCart, TrendingUp, H
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { Combobox } from "@/components/ui/Combobox";
 import { addPurchase, addVendorAction, addProductAction, updatePurchase } from "@/app/actions/transaction";
 import { deleteLot } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -59,7 +60,10 @@ export default function BuyList({
   const [newProduct, setNewProduct] = useState({ name: "", unitType: "Box" });
   const [successMessage, setSuccessMessage] = useState("");
 
-  const fruitSelectRef = React.useRef<HTMLSelectElement>(null);
+  const fruitSelectRef = React.useRef<HTMLInputElement>(null);
+  const vendorSelectRef = React.useRef<HTMLInputElement>(null);
+  const qtyInputRef = React.useRef<HTMLInputElement>(null);
+  const rateInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (successMessage) {
@@ -73,6 +77,18 @@ export default function BuyList({
       fruitSelectRef.current?.focus();
     }
   }, [isModalOpen, isInline]);
+
+  const handleKeyDown = (e: React.KeyboardEvent, nextRef?: React.RefObject<any>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (nextRef) {
+        nextRef.current?.focus();
+      } else {
+        // If no nextRef, it's the last field, so submit
+        handleSubmit(null, true);
+      }
+    }
+  };
 
   const handleApplyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -208,17 +224,14 @@ export default function BuyList({
                   <Apple size={10} /> Quick Add
                 </button>
               </label>
-              <select
+              <Combobox
                 ref={fruitSelectRef}
-                required value={formData.productId}
-                onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              >
-                <option value="">Select Fruit</option>
-                {products.filter(p => p.isActive).map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
-                ))}
-              </select>
+                options={products.filter(p => p.isActive)}
+                value={formData.productId}
+                onChange={(val) => setFormData({ ...formData, productId: val })}
+                onKeyDown={(e) => handleKeyDown(e, vendorSelectRef)}
+                placeholder="Select Fruit..."
+              />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex justify-between">
@@ -230,28 +243,18 @@ export default function BuyList({
                   <UserPlus size={10} /> Quick Add
                 </button>
               </label>
-              <select
-                required value={formData.vendorId}
-                onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
-                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              >
-                <option value="">Select Vendor</option>
-                {vendors.filter(v => v.isActive).map(v => (
-                  <option key={v._id} value={v._id}>{v.name}</option>
-                ))}
-              </select>
+              <Combobox
+                ref={vendorSelectRef}
+                options={vendors.filter(v => v.isActive)}
+                value={formData.vendorId}
+                onChange={(val) => setFormData({ ...formData, vendorId: val })}
+                onKeyDown={(e) => handleKeyDown(e, qtyInputRef)}
+                placeholder="Select Vendor..."
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lot Name / Batch</label>
-              <input
-                type="text" required placeholder="e.g. Batch 1" value={formData.lotName}
-                onChange={(e) => setFormData({ ...formData, lotName: e.target.value })}
-                className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              />
-            </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Date</label>
               <input
@@ -266,16 +269,20 @@ export default function BuyList({
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantity</label>
               <input
+                ref={qtyInputRef}
                 type="number" required min="0.0001" step="any" value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                onKeyDown={(e) => handleKeyDown(e, rateInputRef)}
                 className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Rate</label>
               <input
-                type="number" required min="0.0001" step="any" value={formData.rate}
+                ref={rateInputRef}
+                type="number" required min="0" step="any" value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
+                onKeyDown={(e) => handleKeyDown(e)}
                 className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
@@ -300,7 +307,6 @@ export default function BuyList({
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-2xl font-black text-emerald-900">{selectedProduct?.name}</div>
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">{formData.lotName}</p>
                   </div>
                 </div>
 
@@ -459,7 +465,11 @@ export default function BuyList({
                         <div className="font-bold">{p.productId?.name}</div>
                         <div className="text-[10px] text-indigo-500 uppercase font-black">{p.lotName}</div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">{p.vendorId?.name}</td>
+                      <td className="px-4 py-4 text-sm text-slate-600">
+                        {p.vendorNames?.length > 0 
+                          ? p.vendorNames.join(", ") 
+                          : (p.vendorIds?.map((v: any) => v.name).join(", ") || "N/A")}
+                      </td>
                       <td className="px-4 py-4 text-sm font-semibold text-indigo-600">{p.quantity}</td>
                       <td className="px-4 py-4 text-sm text-right">₹{p.rate}</td>
                       <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{p.quantity * p.rate}</td>
@@ -497,11 +507,11 @@ export default function BuyList({
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantity</label>
-              <input type="number" required value={editFormData.quantity} onChange={(e) => setEditFormData({ ...editFormData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="number" required min="0.0001" step="any" value={editFormData.quantity} onChange={(e) => setEditFormData({ ...editFormData, quantity: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Rate</label>
-              <input type="number" required value={editFormData.rate} onChange={(e) => setEditFormData({ ...editFormData, rate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
+              <input type="number" required min="0" step="any" value={editFormData.rate} onChange={(e) => setEditFormData({ ...editFormData, rate: e.target.value })} className="w-full px-4 py-2 border rounded-lg" />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>

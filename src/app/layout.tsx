@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
+import GlobalShortcuts from "@/components/layout/GlobalShortcuts";
 import { cn } from "@/lib/utils";
 import { Apple } from "lucide-react";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.className, "bg-slate-50 text-slate-900")}>
+        <GlobalShortcuts />
         <div className="flex min-h-screen">
           <Sidebar />
 

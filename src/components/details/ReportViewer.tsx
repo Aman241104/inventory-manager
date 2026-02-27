@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   Calendar,
@@ -25,11 +26,14 @@ import { Modal } from "@/components/ui/Modal";
 import LedgerCard from "./LedgerCard";
 
 export default function ReportViewer({ products }: { products: any[] }) {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'table' | 'ledger'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'ledger'>(
+    searchParams.get("view") === "ledger" ? "ledger" : "table"
+  );
 
   // Edit Lot States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -54,6 +58,12 @@ export default function ReportViewer({ products }: { products: any[] }) {
       const res = await getDetailedReport(filters);
       if (res.success && res.data) {
         setData(res.data);
+        // If auto-print is requested
+        if (searchParams.get("print") === "true") {
+          setTimeout(() => {
+            window.print();
+          }, 1000); // Give time for data to render
+        }
       } else {
         setData([]);
         if (!res.success) setError(res.error || "Unknown error occurred");
@@ -63,7 +73,7 @@ export default function ReportViewer({ products }: { products: any[] }) {
       console.error(err);
     }
     setLoading(false);
-  }, [filters]);
+  }, [filters, searchParams]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -71,6 +81,16 @@ export default function ReportViewer({ products }: { products: any[] }) {
     }, 0);
     return () => clearTimeout(timer);
   }, [fetchReport]);
+
+  // Update viewMode if URL param changes
+  useEffect(() => {
+    const view = searchParams.get("view");
+    const timer = setTimeout(() => {
+      if (view === "ledger") setViewMode("ledger");
+      else if (view === "table") setViewMode("table");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [searchParams]);
 
   const toggleLot = (id: string) => {
     const newExpanded = new Set(expandedLots);
@@ -81,6 +101,48 @@ export default function ReportViewer({ products }: { products: any[] }) {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportCSV = () => {
+    if (data.length === 0) return;
+
+    // Define headers
+    const headers = [
+      "Date", "Fruit", "Batch/Lot", "Vendor", 
+      "Purchased Qty", "Purchase Rate", "Purchased Total",
+      "Sold Qty", "Available Stock", "Status"
+    ];
+
+    // Map data to rows
+    const csvRows = data.map(row => {
+      const status = row.remainingQty === 0 ? "BALANCED" : row.remainingQty < 0 ? "SHORTAGE" : "STOCK";
+      return [
+        row.date,
+        `"${row.productName}"`,
+        `"${row.lotName}"`,
+        `"${row.vendorName}"`,
+        row.purchasedQty,
+        row.purchasedRate,
+        row.purchasedTotal,
+        row.totalSoldQty,
+        row.remainingQty,
+        status
+      ].join(",");
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers.join(","), ...csvRows].join("\n");
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Fruit_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDeleteLot = async (e: React.MouseEvent, id: string) => {
@@ -190,6 +252,16 @@ export default function ReportViewer({ products }: { products: any[] }) {
               <Button variant="outline" onClick={handlePrint} className="py-6 lg:py-2 px-4">
                 <Printer size={18} />
               </Button>
+
+              <Button 
+                variant="outline" 
+                onClick={handleExportCSV} 
+                disabled={data.length === 0} 
+                className="py-6 lg:py-2 px-4 text-emerald-600 border-emerald-100 hover:bg-emerald-50"
+                title="Export CSV"
+              >
+                <Download size={18} />
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -232,7 +304,9 @@ export default function ReportViewer({ products }: { products: any[] }) {
                             </div>
                             <div>
                               <div className="font-black text-slate-800 uppercase tracking-tight">{row.productName}</div>
-                              <div className="text-[10px] text-indigo-600 font-black uppercase">{row.lotName} • {row.date}</div>
+                              <div className="text-[10px] text-indigo-600 font-black uppercase">
+                                {row.lotName} <span className="print:hidden">• {row.date}</span>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -348,9 +422,31 @@ export default function ReportViewer({ products }: { products: any[] }) {
               No matching records found for the selected filters to generate ledgers.
             </div>
           ) : (
-            data.map((row) => (
-              <LedgerCard key={row.lotId} data={row} />
-            ))
+            <table className="w-full border-collapse">
+              <thead className="hidden print:table-header-group">
+                <tr>
+                  <th className="py-4 text-center border-b-2 border-slate-900">
+                    <div className="flex justify-between items-center px-2 font-black uppercase tracking-widest text-lg">
+                      <span className="text-slate-900">Physical Inventory Ledger</span>
+                      <span className="text-slate-600">
+                        {filters.fromDate ? (
+                          filters.fromDate === filters.toDate ? filters.fromDate : `${filters.fromDate} to ${filters.toDate || 'Present'}`
+                        ) : `As of ${new Date().toLocaleDateString()}`}
+                      </span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="print:block">
+                {data.map((row) => (
+                  <tr key={row.lotId} className="print:block print:mb-8">
+                    <td className="py-4 print:py-0 print:block">
+                      <LedgerCard data={row} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       )}

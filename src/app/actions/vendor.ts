@@ -15,7 +15,7 @@ export async function getVendors() {
     const vendors = await Vendor.find({}).sort({ createdAt: -1 }).lean();
     
     const vendorsWithStats = await Promise.all(vendors.map(async (v: any) => {
-      const activeLots = await Purchase.countDocuments({ vendorId: v._id, isDeleted: false });
+      const activeLots = await Purchase.countDocuments({ vendorIds: v._id, isDeleted: false });
       return {
         ...v,
         _id: v._id.toString(),

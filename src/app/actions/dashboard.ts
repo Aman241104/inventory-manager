@@ -90,3 +90,41 @@ export async function getDashboardStats() {
     return { success: false, error: "Failed to fetch stats" };
   }
 }
+
+export async function searchAll(query: string) {
+  try {
+    await connectDB();
+    if (!query || query.length < 2) return { success: true, data: [] };
+
+    const regex = new RegExp(query, "i");
+
+    const [lots, customers] = await Promise.all([
+      Purchase.find({ 
+        $or: [{ lotName: regex }, { vendorNames: regex }],
+        isDeleted: false 
+      }).limit(5).populate("productId", "name").lean(),
+      Customer.find({ name: regex, isActive: true }).limit(5).lean()
+    ]);
+
+    const results = [
+      ...lots.map((l: any) => ({
+        id: l._id.toString(),
+        title: l.lotName,
+        subtitle: `${l.productId?.name || 'Product'} • ${l.vendorNames?.join(", ")}`,
+        type: 'lot',
+        href: `/details?fromDate=${new Date(l.date).toISOString().split('T')[0]}&toDate=${new Date(l.date).toISOString().split('T')[0]}`
+      })),
+      ...customers.map((c: any) => ({
+        id: c._id.toString(),
+        title: c.name,
+        subtitle: `Customer • ${c.contact}`,
+        type: 'customer',
+        href: `/customers`
+      }))
+    ];
+
+    return { success: true, data: results };
+  } catch (error) {
+    return { success: false, error: "Search failed" };
+  }
+}
