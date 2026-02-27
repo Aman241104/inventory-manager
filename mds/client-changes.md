@@ -173,3 +173,15 @@ Implemented global keyboard shortcuts to allow "Hands-On-Keyboard" management ac
 ### **Individual Lot Cleanup**
 - **Reduced Redundancy**: Removed the date from individual Batch/Lot headers. Since the date is now clearly visible at the top of every page, it has been stripped from the individual lot cards to save space and reduce visual clutter.
 - **UI vs. Print Logic**: The date remains visible in the web interface for reference but is intelligently hidden only when generating PDFs or printing.
+
+---
+
+## 14. Reliability & Safety Guardrails (Feb 2026 - Batch 10)
+
+### **Intelligent Transaction Validation**
+- **Error-Proof Saving**: Enhanced the "Save" buttons in all transaction modes (Buy, Sell, and Bulk). The button now remains disabled until all required fields (Fruit, Vendor/Customer, Quantity) are validly filled. This prevents partial or "wrong" transactions from being submitted.
+- **Dynamic Feedback**: In Bulk Mode, the save button now dynamically displays the number of valid rows ready to be committed (e.g., "Commit 5 Rows").
+
+### **Improved Workflow Resilience**
+- **Consistent Cancel Logic**: Refined the "Cancel" buttons across all forms. They now reliably clear unsaved progress and close modals, providing a safe way to exit a transaction without accidental data entry.
+- **Professional Error Handling**: Implemented custom application-level Error and "Page Not Found" (404) screens. If an unexpected error occurs, the user is greeted with a helpful recovery page instead of a generic browser crash.

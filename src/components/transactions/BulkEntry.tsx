@@ -66,6 +66,12 @@ export default function BulkEntry({
     setRows(newRows);
   };
 
+  const validRowsCount = rows.filter(r => {
+    const basic = r.productId && Number(r.quantity) > 0 && r.rate !== "";
+    if (r.type === "sell") return basic && r.customerId && r.purchaseId;
+    return basic && r.vendorId;
+  }).length;
+
   const handleSaveAll = async () => {
     const validRows = rows.filter(r => {
       const basic = r.productId && r.quantity && r.rate;
@@ -113,8 +119,12 @@ export default function BulkEntry({
             <Button onClick={addRow} variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 py-1 h-8 text-xs">
               + Add Row
             </Button>
-            <Button onClick={handleSaveAll} disabled={loading} className="bg-indigo-500 hover:bg-indigo-600 py-1 h-8 text-xs">
-              {loading ? "Saving..." : "Commit All Rows"}
+            <Button 
+              onClick={handleSaveAll} 
+              disabled={loading || validRowsCount === 0} 
+              className="bg-indigo-500 hover:bg-indigo-600 py-1 h-8 text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {loading ? "Saving..." : `Commit ${validRowsCount} Rows`}
             </Button>
           </div>
         </div>

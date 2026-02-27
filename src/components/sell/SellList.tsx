@@ -276,6 +276,24 @@ export default function SellList({
 
   const isExtraSold = selectedLot && Number(formData.quantity) > selectedLot.availableQty;
 
+  const isFormValid = formData.productId && formData.customerId && formData.purchaseId && Number(formData.quantity) > 0;
+
+  const handleCancel = (isModal: boolean) => {
+    if (isModal) {
+      setIsModalOpen(false);
+    } else {
+      setFormData({
+        productId: "",
+        customerId: "",
+        purchaseId: "",
+        quantity: "",
+        rate: "",
+        date: new Date().toISOString().split('T')[0],
+        notes: ""
+      });
+    }
+  };
+
   const renderForm = (isModal = true) => (
     <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
       {successMessage && (
@@ -455,11 +473,22 @@ export default function SellList({
       </div>
 
       <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
-        <Button type="button" variant="ghost" onClick={() => isModal ? setIsModalOpen(false) : router.push('/transactions')}>Cancel</Button>
-        <Button type="button" variant="outline" disabled={loading} onClick={(e) => handleSubmit(e, true)} className="border-indigo-200 text-indigo-600">
+        <Button type="button" variant="ghost" onClick={() => handleCancel(isModal)}>Cancel</Button>
+        <Button 
+          type="button" 
+          variant="outline" 
+          disabled={loading || !isFormValid} 
+          onClick={(e) => handleSubmit(e, true)} 
+          className="border-indigo-200 text-indigo-600 disabled:opacity-30"
+        >
           {loading ? "..." : "Save & Add Another"}
         </Button>
-        <Button type="submit" variant={isExtraSold ? "danger" : "primary"} disabled={loading} className="px-10">
+        <Button 
+          type="submit" 
+          variant={isExtraSold ? "danger" : "primary"} 
+          disabled={loading || !isFormValid} 
+          className="px-10 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
           {loading ? "Saving..." : "Save Transaction"}
         </Button>
       </div>

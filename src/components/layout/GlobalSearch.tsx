@@ -33,8 +33,11 @@ export default function GlobalSearch() {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
-      setQuery("");
-      setResults([]);
+      const timer = setTimeout(() => {
+        setQuery("");
+        setResults([]);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 

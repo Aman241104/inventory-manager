@@ -206,6 +206,25 @@ export default function BuyList({
   const selectedProduct = products.find(p => p._id === formData.productId);
   const selectedVendor = vendors.find(v => v._id === formData.vendorId);
 
+  const isFormValid = formData.productId && formData.vendorId && Number(formData.quantity) > 0;
+
+  const handleCancel = (isModal: boolean) => {
+    if (isModal) {
+      setIsModalOpen(false);
+    } else {
+      // Clear form
+      setFormData({
+        productId: "",
+        vendorId: "",
+        lotName: "Batch 1",
+        quantity: "",
+        rate: "",
+        date: new Date().toISOString().split('T')[0],
+        notes: ""
+      });
+    }
+  };
+
   const renderForm = (isModal = true) => (
     <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
       {successMessage && (
@@ -353,11 +372,21 @@ export default function BuyList({
       </div>
 
       <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 mt-6">
-        <Button type="button" variant="ghost" onClick={() => isModal ? setIsModalOpen(false) : router.push('/transactions')}>Cancel</Button>
-        <Button type="button" variant="outline" disabled={loading} onClick={(e) => handleSubmit(e, true)} className="border-emerald-200 text-emerald-600">
+        <Button type="button" variant="ghost" onClick={() => handleCancel(isModal)}>Cancel</Button>
+        <Button 
+          type="button" 
+          variant="outline" 
+          disabled={loading || !isFormValid} 
+          onClick={(e) => handleSubmit(e, true)} 
+          className="border-emerald-200 text-emerald-600 disabled:opacity-30"
+        >
           {loading ? "..." : "Save & Add Another"}
         </Button>
-        <Button type="submit" disabled={loading} className="px-10 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100">
+        <Button 
+          type="submit" 
+          disabled={loading || !isFormValid} 
+          className="px-10 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
           {loading ? "Saving..." : "Save Purchase"}
         </Button>
       </div>
