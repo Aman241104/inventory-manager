@@ -240,10 +240,18 @@ export default function SellList({
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this sale?")) {
+      const previousSales = [...sales];
+      // Optimistic update
+      setSales(prev => prev.filter(s => s._id !== id));
+
       const res = await deleteSale(id);
       if (res.success) {
         if (onSuccess) onSuccess();
         router.refresh();
+      } else {
+        // Rollback
+        setSales(previousSales);
+        alert(res.error || "Failed to delete sale");
       }
     }
   };
@@ -680,7 +688,7 @@ export default function SellList({
                           <button onClick={() => handleOpenEdit(s)} disabled={s.isOptimistic} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-0">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(s._id)} disabled={s.isOptimistic} className="p-1 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-0">
+                          <button onClick={() => handleDelete(s._id)} disabled={s.isOptimistic} className="p-1 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-0 relative z-10">
                             <Trash2 size={16} />
                           </button>
                         </div>

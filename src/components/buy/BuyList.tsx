@@ -192,10 +192,18 @@ export default function BuyList({
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure? This will delete the ENTIRE batch and all its sales!")) {
+      const previousPurchases = [...purchases];
+      // Optimistic update
+      setPurchases(prev => prev.filter(p => p._id !== id));
+
       const res = await deleteLot(id);
       if (res.success) {
         if (onSuccess) onSuccess();
         router.refresh();
+      } else {
+        // Rollback
+        setPurchases(previousPurchases);
+        alert(res.error || "Failed to delete lot");
       }
     }
   };
@@ -549,7 +557,7 @@ export default function BuyList({
                           <button onClick={() => handleOpenEdit(p)} disabled={p.isOptimistic} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-0">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(p._id)} disabled={p.isOptimistic} className="p-1 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-0">
+                          <button onClick={() => handleDelete(p._id)} disabled={p.isOptimistic} className="p-1 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-0 relative z-10">
                             <Trash2 size={16} />
                           </button>
                         </div>

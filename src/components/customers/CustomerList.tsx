@@ -148,7 +148,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                           <button onClick={() => handleOpenEditModal(customer)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(customer._id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors">
+                          <button onClick={() => handleDelete(customer._id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-10">
                             <Trash2 size={16} />
                           </button>
                         </div>
