@@ -51,7 +51,7 @@ export async function addProduct(formData: { name: string; unitType: string }) {
     await connectDB();
     const newProduct = new Product(formData);
     await newProduct.save();
-    revalidatePath("/products");
+    try { revalidatePath("/products"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to add product:", error);
@@ -64,7 +64,7 @@ export async function updateProduct(id: string, formData: Partial<IProduct>) {
   try {
     await connectDB();
     await Product.findByIdAndUpdate(id, formData);
-    revalidatePath("/products");
+    try { revalidatePath("/products"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to update product:", error);
@@ -94,7 +94,7 @@ export async function toggleProductStatus(id: string, isActive: boolean) {
   try {
     await connectDB();
     await Product.findByIdAndUpdate(id, { isActive });
-    revalidatePath("/products");
+    try { revalidatePath("/products"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to toggle product status:", error);

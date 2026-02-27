@@ -40,7 +40,7 @@ export async function addCustomer(formData: { name: string; contact: string }) {
     await connectDB();
     const newCustomer = new Customer(formData);
     await newCustomer.save();
-    revalidatePath("/customers");
+    try { revalidatePath("/customers"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to add customer:", error);
@@ -53,7 +53,7 @@ export async function updateCustomer(id: string, formData: { name: string; conta
   try {
     await connectDB();
     await Customer.findByIdAndUpdate(id, formData);
-    revalidatePath("/customers");
+    try { revalidatePath("/customers"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to update customer:", error);
@@ -69,11 +69,7 @@ export async function deleteCustomer(id: string) {
     // Soft delete
     await Customer.findByIdAndUpdate(id, { isDeleted: true });
     
-    try {
-      revalidatePath("/customers");
-    } catch (e) {
-      // Ignore revalidation errors in non-next contexts
-    }
+    try { revalidatePath("/customers"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete customer:", error);
@@ -85,7 +81,7 @@ export async function toggleCustomerStatus(id: string, isActive: boolean) {
   try {
     await connectDB();
     await Customer.findByIdAndUpdate(id, { isActive });
-    revalidatePath("/customers");
+    try { revalidatePath("/customers"); } catch (e) {}
     return { success: true };
   } catch (error) {
     return { success: false, error: "Failed to update customer" };

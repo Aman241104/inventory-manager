@@ -12,11 +12,16 @@ interface ProductListProps {
 }
 
 export default function ProductList({ initialProducts }: ProductListProps) {
-  const [products] = useState(initialProducts);
+  const [products, setProducts] = useState(initialProducts);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Keep local state in sync with props
+  React.useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -55,24 +60,33 @@ export default function ProductList({ initialProducts }: ProductListProps) {
 
     if (result.success) {
       setIsModalOpen(false);
+      // Let Next.js revalidate, but we can also reload or wait for refresh
       window.location.reload();
     }
     setLoading(false);
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    // Optimistic update
+    setProducts(prev => prev.map(p => p._id === id ? { ...p, isActive: !currentStatus } : p));
+    
     const result = await toggleProductStatus(id, !currentStatus);
-    if (result.success) {
-      window.location.reload();
+    if (!result.success) {
+      // Rollback
+      setProducts(initialProducts);
+      alert("Failed to update status");
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+      // Optimistic delete
+      setProducts(prev => prev.filter(p => p._id !== id));
+
       const result = await deleteProduct(id);
-      if (result.success) {
-        window.location.reload();
-      } else {
+      if (!result.success) {
+        // Rollback
+        setProducts(initialProducts);
         alert(result.error || "Failed to delete product.");
       }
     }

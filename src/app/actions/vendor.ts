@@ -36,7 +36,7 @@ export async function addVendor(formData: { name: string; contact: string }) {
     await connectDB();
     const newVendor = new Vendor(formData);
     await newVendor.save();
-    revalidatePath("/vendors");
+    try { revalidatePath("/vendors"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to add vendor:", error);
@@ -49,7 +49,7 @@ export async function updateVendor(id: string, formData: { name: string; contact
   try {
     await connectDB();
     await Vendor.findByIdAndUpdate(id, formData);
-    revalidatePath("/vendors");
+    try { revalidatePath("/vendors"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to update vendor:", error);
@@ -65,9 +65,7 @@ export async function deleteVendor(id: string) {
     // Soft delete
     await Vendor.findByIdAndUpdate(id, { isDeleted: true });
     
-    try {
-      revalidatePath("/vendors");
-    } catch (e) {}
+    try { revalidatePath("/vendors"); } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete vendor:", error);
@@ -79,7 +77,7 @@ export async function toggleVendorStatus(id: string, isActive: boolean) {
   try {
     await connectDB();
     await Vendor.findByIdAndUpdate(id, { isActive });
-    revalidatePath("/vendors");
+    try { revalidatePath("/vendors"); } catch (e) {}
     return { success: true };
   } catch (error) {
     return { success: false, error: "Failed to update vendor" };

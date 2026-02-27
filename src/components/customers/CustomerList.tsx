@@ -8,12 +8,16 @@ import { Modal } from "@/components/ui/Modal";
 import { addCustomer, updateCustomer, toggleCustomerStatus, deleteCustomer } from "@/app/actions/customer";
 
 export default function CustomerList({ initialCustomers }: { initialCustomers: any[] }) {
-  const [customers] = useState(initialCustomers);
+  const [customers, setCustomers] = useState(initialCustomers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", contact: "" });
+
+  React.useEffect(() => {
+    setCustomers(initialCustomers);
+  }, [initialCustomers]);
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(search.toLowerCase())
@@ -50,16 +54,20 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    setCustomers(prev => prev.map(c => c._id === id ? { ...c, isActive: !currentStatus } : c));
     const result = await toggleCustomerStatus(id, !currentStatus);
-    if (result.success) window.location.reload();
+    if (!result.success) {
+      setCustomers(initialCustomers);
+      alert("Failed to update status");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this customer? This action cannot be undone.")) {
+      setCustomers(prev => prev.filter(c => c._id !== id));
       const result = await deleteCustomer(id);
-      if (result.success) {
-        window.location.reload();
-      } else {
+      if (!result.success) {
+        setCustomers(initialCustomers);
         alert(result.error || "Failed to delete customer.");
       }
     }

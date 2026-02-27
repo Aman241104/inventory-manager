@@ -8,12 +8,16 @@ import { Modal } from "@/components/ui/Modal";
 import { addVendor, updateVendor, toggleVendorStatus, deleteVendor } from "@/app/actions/vendor";
 
 export default function VendorList({ initialVendors }: { initialVendors: any[] }) {
-  const [vendors] = useState(initialVendors);
+  const [vendors, setVendors] = useState(initialVendors);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", contact: "" });
+
+  React.useEffect(() => {
+    setVendors(initialVendors);
+  }, [initialVendors]);
 
   const filteredVendors = vendors.filter(v => 
     v.name.toLowerCase().includes(search.toLowerCase())
@@ -25,9 +29,9 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (vendor: any) => {
-    setEditingVendor(vendor);
-    setFormData({ name: vendor.name, contact: vendor.contact || "" });
+  const handleOpenEditModal = (customer: any) => {
+    setEditingVendor(customer);
+    setFormData({ name: customer.name, contact: customer.contact || "" });
     setIsModalOpen(true);
   };
 
@@ -50,16 +54,20 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    setVendors(prev => prev.map(v => v._id === id ? { ...v, isActive: !currentStatus } : v));
     const result = await toggleVendorStatus(id, !currentStatus);
-    if (result.success) window.location.reload();
+    if (!result.success) {
+      setVendors(initialVendors);
+      alert("Failed to update status");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
+      setVendors(prev => prev.filter(v => v._id !== id));
       const result = await deleteVendor(id);
-      if (result.success) {
-        window.location.reload();
-      } else {
+      if (!result.success) {
+        setVendors(initialVendors);
         alert(result.error || "Failed to delete vendor.");
       }
     }
