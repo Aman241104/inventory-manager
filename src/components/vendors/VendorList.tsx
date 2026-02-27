@@ -11,6 +11,7 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
   const [vendors, setVendors] = useState(initialVendors);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<any>(null);
+  const [deletingVendorId, setDeletingVendorId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", contact: "" });
@@ -19,7 +20,7 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
     setVendors(initialVendors);
   }, [initialVendors]);
 
-  const filteredVendors = vendors.filter(v => 
+  const filteredVendors = vendors.filter(v =>
     v.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -38,7 +39,7 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     let result;
     if (editingVendor) {
       result = await updateVendor(editingVendor._id, formData);
@@ -54,24 +55,50 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    const previousVendors = [...vendors];
     setVendors(prev => prev.map(v => v._id === id ? { ...v, isActive: !currentStatus } : v));
-    const result = await toggleVendorStatus(id, !currentStatus);
-    if (!result.success) {
-      setVendors(initialVendors);
-      alert("Failed to update status");
+
+    try {
+      const result = await toggleVendorStatus(id, !currentStatus);
+      if (!result.success) {
+        setVendors(previousVendors);
+        alert("Failed to update status");
+      }
+    } catch (err) {
+      console.error("Error toggling vendor status:", err);
+      setVendors(previousVendors);
+      alert("An error occurred while updating the vendor status.");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this vendor? This action cannot be undone.")) {
-      setVendors(prev => prev.filter(v => v._id !== id));
+  const handleDeleteClick = (id: string) => {
+    setDeletingVendorId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingVendorId) return;
+
+    const id = deletingVendorId;
+    setDeletingVendorId(null);
+
+    const previousVendors = [...vendors];
+    // Optimistic delete happens BEFORE server action
+    setVendors(prev => prev.filter(v => v._id !== id));
+
+    try {
       const result = await deleteVendor(id);
       if (!result.success) {
-        setVendors(initialVendors);
+        // Rollback
+        setVendors(previousVendors);
         alert(result.error || "Failed to delete vendor.");
       }
+    } catch (err) {
+      console.error("Error deleting vendor:", err);
+      setVendors(previousVendors);
+      alert("An error occurred while deleting the vendor.");
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -92,9 +119,9 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
             <CardTitle>Vendor List ({filteredVendors.length})</CardTitle>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search vendors..." 
+              <input
+                type="text"
+                placeholder="Search vendors..."
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -134,9 +161,8 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
                         {vendor.activeLotsCount || 0}
                       </td>
                       <td className="px-4 py-4 text-sm">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          vendor.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-                        }`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${vendor.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+                          }`}>
                           {vendor.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
@@ -148,8 +174,17 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
                           <button onClick={() => handleOpenEditModal(vendor)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(vendor._id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-10">
-                            <Trash2 size={16} />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteClick(vendor._id);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-50 pointer-events-auto"
+                            title="Delete Vendor"
+                          >
+                            <Trash2 size={16} className="pointer-events-none" />
                           </button>
                         </div>
                       </td>
@@ -166,17 +201,17 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Vendor Name</label>
-            <input 
+            <input
               type="text" required value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Contact Info</label>
-            <input 
+            <input
               type="text" value={formData.contact}
-              onChange={(e) => setFormData({...formData, contact: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
               placeholder="Phone or Email"
               className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -188,6 +223,35 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deletingVendorId}
+        onClose={() => setDeletingVendorId(null)}
+        title="Confirm Deletion"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this vendor? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletingVendorId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmDelete}
+              className="bg-rose-600 hover:bg-rose-700 text-white border-transparent"
+            >
+              Delete Vendor
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

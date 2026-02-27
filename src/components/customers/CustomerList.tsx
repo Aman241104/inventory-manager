@@ -11,6 +11,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
   const [customers, setCustomers] = useState(initialCustomers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: "", contact: "" });
@@ -19,7 +20,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
     setCustomers(initialCustomers);
   }, [initialCustomers]);
 
-  const filteredCustomers = customers.filter(c => 
+  const filteredCustomers = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -38,7 +39,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     let result;
     if (editingCustomer) {
       result = await updateCustomer(editingCustomer._id, formData);
@@ -54,24 +55,50 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
   };
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    const previousCustomers = [...customers];
     setCustomers(prev => prev.map(c => c._id === id ? { ...c, isActive: !currentStatus } : c));
-    const result = await toggleCustomerStatus(id, !currentStatus);
-    if (!result.success) {
-      setCustomers(initialCustomers);
-      alert("Failed to update status");
+
+    try {
+      const result = await toggleCustomerStatus(id, !currentStatus);
+      if (!result.success) {
+        setCustomers(previousCustomers);
+        alert("Failed to update status");
+      }
+    } catch (err) {
+      console.error("Error toggling customer status:", err);
+      setCustomers(previousCustomers);
+      alert("An error occurred while updating the customer status.");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this customer? This action cannot be undone.")) {
-      setCustomers(prev => prev.filter(c => c._id !== id));
+  const handleDeleteClick = (id: string) => {
+    setDeletingCustomerId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingCustomerId) return;
+
+    const id = deletingCustomerId;
+    setDeletingCustomerId(null);
+
+    const previousCustomers = [...customers];
+    // Optimistic delete happens BEFORE server action
+    setCustomers(prev => prev.filter(c => c._id !== id));
+
+    try {
       const result = await deleteCustomer(id);
       if (!result.success) {
-        setCustomers(initialCustomers);
+        // Rollback
+        setCustomers(previousCustomers);
         alert(result.error || "Failed to delete customer.");
       }
+    } catch (err) {
+      console.error("Error deleting customer:", err);
+      setCustomers(previousCustomers);
+      alert("An error occurred while deleting the customer.");
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -92,9 +119,9 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
             <CardTitle>Customer List ({filteredCustomers.length})</CardTitle>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search customers..." 
+              <input
+                type="text"
+                placeholder="Search customers..."
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -134,9 +161,8 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                         {customer.activeLotsCount || 0}
                       </td>
                       <td className="px-4 py-4 text-sm">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          customer.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-                        }`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${customer.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+                          }`}>
                           {customer.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
@@ -148,8 +174,17 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                           <button onClick={() => handleOpenEditModal(customer)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(customer._id)} className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-10">
-                            <Trash2 size={16} />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteClick(customer._id);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-50 pointer-events-auto"
+                            title="Delete Customer"
+                          >
+                            <Trash2 size={16} className="pointer-events-none" />
                           </button>
                         </div>
                       </td>
@@ -166,17 +201,17 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Customer Name</label>
-            <input 
+            <input
               type="text" required value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Contact Info</label>
-            <input 
+            <input
               type="text" value={formData.contact}
-              onChange={(e) => setFormData({...formData, contact: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
               placeholder="Phone or Email"
               className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -188,6 +223,35 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deletingCustomerId}
+        onClose={() => setDeletingCustomerId(null)}
+        title="Confirm Deletion"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this customer? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeletingCustomerId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmDelete}
+              className="bg-rose-600 hover:bg-rose-700 text-white border-transparent"
+            >
+              Delete Customer
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
