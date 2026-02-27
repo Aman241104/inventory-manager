@@ -60,7 +60,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
       if (result.success) {
         window.location.reload();
       } else {
-        alert("Failed to delete customer. They might be linked to transactions.");
+        alert(result.error || "Failed to delete customer.");
       }
     }
   };

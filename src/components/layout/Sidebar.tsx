@@ -37,7 +37,7 @@ export default function Sidebar() {
     <>
       {/* Mobile Toggle */}
       <button
-        className="lg:hidden fixed top-3 left-3 z-50 p-2 text-white hover:bg-slate-800 rounded-lg transition-colors"
+        className="lg:hidden fixed top-3 left-3 z-[60] p-2 text-white hover:bg-slate-800 rounded-lg transition-colors bg-slate-900 shadow-md"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -59,9 +59,7 @@ export default function Sidebar() {
 
           {/* Nav Items */}
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
-            <div className="px-1">
-              <GlobalSearch />
-            </div>
+            <GlobalSearch />
 
             <div className="space-y-2">
               <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Main Hub</p>

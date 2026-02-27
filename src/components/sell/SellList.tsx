@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
+import EditableCell from "@/components/ui/EditableCell";
 import { addSale, getLotsForProduct, addCustomerAction, addProductAction, updateSale } from "@/app/actions/transaction";
 import { deleteSale } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default function SellList({
   initialSales,
@@ -25,6 +27,7 @@ export default function SellList({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [sales, setSales] = useState(initialSales);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -68,6 +71,10 @@ export default function SellList({
   const lotSelectRef = React.useRef<HTMLSelectElement>(null);
   const qtyInputRef = React.useRef<HTMLInputElement>(null);
   const rateInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSales(initialSales);
+  }, [initialSales]);
 
   useEffect(() => {
     if (successMessage) {
@@ -149,6 +156,22 @@ export default function SellList({
     if (e) e.preventDefault();
     console.log("Submitting sale data:", formData);
     setLoading(true);
+
+    // Optimistic Entry
+    const tempId = `temp-${new Date().getTime()}`;
+    const optimisticEntry = {
+      _id: tempId,
+      productId: products.find(p => p._id === formData.productId),
+      customerId: customers.find(c => c._id === formData.customerId),
+      purchaseId: availableLots.find(l => l._id === formData.purchaseId),
+      quantity: Number(formData.quantity),
+      rate: Number(formData.rate) || 0,
+      date: formData.date,
+      isOptimistic: true
+    };
+
+    setSales(prev => [optimisticEntry, ...prev]);
+
     try {
       const result = await addSale({
         ...formData,
@@ -175,28 +198,12 @@ export default function SellList({
 
         router.refresh();
         if (onSuccess) onSuccess();
-        if (!addAnother) {
-          if (!isInline) setTimeout(() => window.location.reload(), 500);
-          else router.refresh();
-        } else {
-          if (formData.productId) {
-            getLotsForProduct(formData.productId).then(res => {
-              if (res.success) setAvailableLots(res.data);
-            });
-          }
-          // Intelligently focus based on what's cleared
-          if (!pinnedFields.has("product")) {
-            fruitSelectRef.current?.focus();
-          } else if (!pinnedFields.has("customer")) {
-            customerSelectRef.current?.focus();
-          } else {
-            qtyInputRef.current?.focus();
-          }
-        }
       } else {
+        setSales(initialSales); // Rollback
         alert(result.error || "Failed to save sale");
       }
     } catch (err) {
+      setSales(initialSales); // Rollback
       console.error("HandleSubmit error:", err);
     } finally {
       setLoading(false);
@@ -384,7 +391,7 @@ export default function SellList({
               </label>
               <input
                 ref={rateInputRef}
-                type="number" required min="0" step="any" value={formData.rate}
+                type="number" min="0" step="any" value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
                 onKeyDown={(e) => handleKeyDown(e)}
                 className={`w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm focus:ring-2 outline-none transition-all ${selectedLot && Number(formData.rate) > 0 && Number(formData.rate) < selectedLot.rate
@@ -604,10 +611,10 @@ export default function SellList({
         </Card>
       )}
 
-      {initialSales.length > 0 && (
+      {sales.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Sales History ({initialSales.length})</CardTitle>
+            <CardTitle>Sales History ({sales.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -625,8 +632,11 @@ export default function SellList({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {initialSales.map((s) => (
-                    <tr key={s._id} className="hover:bg-slate-50/50 transition-colors">
+                  {sales.map((s) => (
+                    <tr key={s._id} className={cn(
+                      "hover:bg-slate-50/50 transition-colors",
+                      s.isOptimistic && "opacity-50 grayscale animate-pulse"
+                    )}>
                       <td className="px-4 py-4 text-sm text-slate-500">
                         {new Date(s.date).toLocaleDateString()}
                       </td>
@@ -635,7 +645,15 @@ export default function SellList({
                         <div className="text-[10px] text-indigo-500 uppercase font-black">{s.purchaseId?.lotName || 'Unknown Lot'}</div>
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-600">{s.customerId?.name}</td>
-                      <td className="px-4 py-4 text-sm font-semibold text-emerald-600">{s.quantity}</td>
+                      <td className="px-4 py-4 text-sm font-semibold text-emerald-600">
+                        <EditableCell 
+                          value={s.quantity} 
+                          onSave={async (val) => {
+                            await updateSale(s._id, { quantity: val });
+                          }}
+                          className="text-emerald-600"
+                        />
+                      </td>
                       <td className="px-4 py-4 text-sm">
                         {s.isExtraSold ? (
                           <span className="inline-flex items-center gap-1 text-rose-600 font-medium text-xs bg-rose-50 px-2 py-0.5 rounded-full">
@@ -647,14 +665,22 @@ export default function SellList({
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm text-right">₹{s.rate}</td>
+                      <td className="px-4 py-4 text-sm text-right">
+                        <EditableCell 
+                          value={s.rate} 
+                          prefix="₹"
+                          onSave={async (val) => {
+                            await updateSale(s._id, { rate: val });
+                          }}
+                        />
+                      </td>
                       <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{s.quantity * s.rate}</td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => handleOpenEdit(s)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                          <button onClick={() => handleOpenEdit(s)} disabled={s.isOptimistic} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-0">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(s._id)} className="p-1 text-slate-400 hover:text-rose-600 transition-colors">
+                          <button onClick={() => handleDelete(s._id)} disabled={s.isOptimistic} className="p-1 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-0">
                             <Trash2 size={16} />
                           </button>
                         </div>

@@ -425,8 +425,8 @@ export default function ReportViewer({ products }: { products: any[] }) {
             <table className="w-full border-collapse">
               <thead className="hidden print:table-header-group">
                 <tr>
-                  <th className="py-4 text-center border-b-2 border-slate-900">
-                    <div className="flex justify-between items-center px-2 font-black uppercase tracking-widest text-lg">
+                  <th className="py-2 print:py-1 text-center border-b-2 border-slate-900">
+                    <div className="flex justify-between items-center px-2 font-black uppercase tracking-widest text-lg print:text-sm">
                       <span className="text-slate-900">Physical Inventory Ledger</span>
                       <span className="text-slate-600">
                         {filters.fromDate ? (

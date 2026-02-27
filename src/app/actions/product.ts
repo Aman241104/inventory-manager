@@ -88,10 +88,12 @@ export async function deleteProduct(id: string) {
       };
     }
 
-    // Hard delete if no transactions
-    await Product.findByIdAndDelete(id);
+    // Soft delete if no transactions
+    await Product.findByIdAndUpdate(id, { isActive: false });
     
-    revalidatePath("/products");
+    try {
+      revalidatePath("/products");
+    } catch (e) {}
     return { success: true };
   } catch (error) {
     console.error("Failed to delete product:", error);

@@ -60,7 +60,7 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
       if (result.success) {
         window.location.reload();
       } else {
-        alert("Failed to delete vendor. They might be linked to transactions.");
+        alert(result.error || "Failed to delete vendor.");
       }
     }
   };

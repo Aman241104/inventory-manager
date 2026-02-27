@@ -12,57 +12,71 @@ export async function getDashboardStats() {
   try {
     await connectDB();
 
-    // Explicitly register for population
-    const _p = Product;
-    const _v = Vendor;
-    const _c = Customer;
-
-    // Get all lots (Purchases)
-    const lots = await Purchase.find({ isDeleted: false })
-      .populate("productId", "name unitType")
-      .sort({ date: -1 })
-      .lean();
-
-    const lotIds = lots.map((l: any) => l._id);
-
-    // Fetch all sales for these lots in ONE query
-    const allSales = await Sale.find({ 
-      purchaseId: { $in: lotIds }, 
-      isDeleted: false 
-    })
-    .populate("customerId", "name")
-    .sort({ date: 1 })
-    .lean();
-
-    const lotSummaries: ILotSummary[] = lots.map((lot: any) => {
-        // Filter sales for this specific lot from the pre-fetched list
-        const lotSales = allSales.filter((s: any) => s.purchaseId.toString() === lot._id.toString());
-
-        const totalSold = lotSales.reduce((acc: number, sale: any) => acc + sale.quantity, 0);
-        const remainingStock = lot.quantity - totalSold;
-
-        let status: 'OK' | 'REMAINING' | 'EXTRA_SOLD' = 'OK';
-        if (remainingStock > 0) status = 'REMAINING';
-        if (remainingStock < 0) status = 'EXTRA_SOLD';
-
-        return {
-          lotId: lot._id.toString(),
-          productName: lot.productId?.name || "Deleted Product",
-          unitType: lot.productId?.unitType || "N/A",
-          lotName: lot.lotName,
-          purchaseRate: lot.rate,
-          date: new Date(lot.date).toISOString().split('T')[0],
-          totalPurchased: lot.quantity,
-          sales: lotSales.map((s: any) => ({
-            customerName: s.customerId?.name || "Unknown",
-            quantity: s.quantity,
-            rate: s.rate,
-            date: new Date(s.date).toISOString().split('T')[0]
-          })),
-          remainingStock: remainingStock,
-          status
-        };
-    });
+    // Use aggregation for extreme speed
+    const lotSummaries: any[] = await Purchase.aggregate([
+      { $match: { isDeleted: false } },
+      { $sort: { date: -1 } },
+      // Join Product info
+      {
+        $lookup: {
+          from: "products",
+          localField: "productId",
+          foreignField: "_id",
+          as: "product"
+        }
+      },
+      { $unwind: "$product" },
+      // Join Sales info
+      {
+        $lookup: {
+          from: "sales",
+          let: { lotId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $and: [ { $eq: ["$purchaseId", "$$lotId"] }, { $eq: ["$isDeleted", false] } ] } } },
+            { $sort: { date: 1 } },
+            {
+              $lookup: {
+                from: "customers",
+                localField: "customerId",
+                foreignField: "_id",
+                as: "customer"
+              }
+            },
+            { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                customerName: { $ifNull: ["$customer.name", "Unknown"] },
+                quantity: 1,
+                rate: 1,
+                date: 1
+              }
+            }
+          ],
+          as: "sales"
+        }
+      },
+      // Final Projection: Send only what the UI needs
+      {
+        $project: {
+          _id: 0,
+          lotId: { $toString: "$_id" },
+          productName: "$product.name",
+          unitType: "$product.unitType",
+          lotName: 1,
+          purchaseRate: "$rate",
+          date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+          totalPurchased: "$quantity",
+          remainingStock: "$remainingQty",
+          sales: 1,
+          status: {
+            $cond: [
+              { $gt: ["$remainingQty", 0] }, "REMAINING",
+              { $cond: [ { $lt: ["$remainingQty", 0] }, "EXTRA_SOLD", "OK" ] }
+            ]
+          }
+        }
+      }
+    ]);
 
     const totalBatchesActive = lotSummaries.filter(l => l.remainingStock > 0).length;
     const totalUnitsInHand = lotSummaries.reduce((acc, l) => acc + (l.remainingStock > 0 ? l.remainingStock : 0), 0);

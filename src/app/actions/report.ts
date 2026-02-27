@@ -7,6 +7,7 @@ import Product from "@/models/Product";
 import Vendor from "@/models/Vendor";
 import Customer from "@/models/Customer";
 import { revalidatePath } from "next/cache";
+import mongoose from "mongoose";
 
 export async function deleteLot(id: string) {
   try {
@@ -26,6 +27,15 @@ export async function deleteLot(id: string) {
 export async function deleteSale(id: string) {
   try {
     await connectDB();
+    
+    // Get sale info before deleting to restore stock
+    const sale = await Sale.findById(id);
+    if (sale) {
+      await Purchase.findByIdAndUpdate(sale.purchaseId, {
+        $inc: { remainingQty: sale.quantity }
+      });
+    }
+
     // Soft delete the sale
     await Sale.findByIdAndUpdate(id, { isDeleted: true });
     revalidatePath("/details");
@@ -44,79 +54,96 @@ export async function getDetailedReport(filters: {
   try {
     await connectDB();
     
-    // Explicitly register schemas for population
-    const _v = Vendor;
-    const _c = Customer;
-    const _p = Product;
-    
-    const query: any = { isDeleted: false };
-    if (filters.productId) query.productId = filters.productId;
+    const matchQuery: any = { isDeleted: false };
+    if (filters.productId) matchQuery.productId = new mongoose.Types.ObjectId(filters.productId);
     if (filters.fromDate || filters.toDate) {
-      query.date = {};
-      if (filters.fromDate) query.date.$gte = new Date(filters.fromDate);
+      matchQuery.date = {};
+      if (filters.fromDate) matchQuery.date.$gte = new Date(filters.fromDate);
       if (filters.toDate) {
         const end = new Date(filters.toDate);
         end.setHours(23, 59, 59, 999);
-        query.date.$lte = end;
+        matchQuery.date.$lte = end;
       }
     }
 
-    // Get all lots matching filters
-    const lots = await Purchase.find(query)
-      .populate("productId", "name unitType")
-      .populate("vendorIds", "name")
-      .sort({ date: -1 })
-      .lean();
-
-    const lotIds = lots.map((l: any) => l._id);
-
-    // Fetch all sales for these lots in ONE query
-    const allSales = await Sale.find({ 
-      purchaseId: { $in: lotIds }, 
-      isDeleted: false 
-    })
-    .populate("customerId", "name")
-    .sort({ date: 1 })
-    .lean();
-
-    const detailedRows = lots.map((lot: any) => {
-      try {
-        const lotSales = allSales.filter((s: any) => s.purchaseId && s.purchaseId.toString() === lot._id.toString());
-        const totalSold = lotSales.reduce((acc: number, s: any) => acc + s.quantity, 0);
-        
-        const lotDate = lot.date ? new Date(lot.date) : new Date();
-        
-        return {
-          lotId: lot._id.toString(),
-          date: lotDate.toISOString().split('T')[0],
-          productName: lot.productId?.name || "Deleted Product",
-          unitType: lot.productId?.unitType || "N/A",
-          lotName: lot.lotName || "Unnamed Batch",
-          vendorName: lot.vendorNames && lot.vendorNames.length > 0 
-            ? lot.vendorNames.join(", ") 
-            : (lot.vendorIds && lot.vendorIds.length > 0 
-                ? lot.vendorIds.map((v: any) => v.name || "Unknown").join(", ") 
-                : "N/A"),
-          vendorNames: lot.vendorNames || [],
-          purchasedQty: lot.quantity || 0,
-          purchasedRate: lot.rate || 0,
-          purchasedTotal: lot.totalAmount || (lot.quantity * lot.rate) || 0,
-          sales: lotSales.map((s: any) => ({
-            saleId: s._id.toString(),
-            date: s.date ? new Date(s.date).toISOString().split('T')[0] : lotDate.toISOString().split('T')[0],
-            customerName: s.customerId?.name || "N/A",
-            quantity: s.quantity || 0,
-            rate: s.rate || 0,
-            total: s.totalAmount || (s.quantity * s.rate) || 0
-          })),
-          totalSoldQty: totalSold,
-          remainingQty: (lot.quantity || 0) - totalSold
-        };
-      } catch (err) {
-        console.error("Error processing lot row:", err);
-        return null;
+    const detailedRows = await Purchase.aggregate([
+      { $match: matchQuery },
+      { $sort: { date: -1 } },
+      { $limit: 50 },
+      {
+        $lookup: {
+          from: "products",
+          localField: "productId",
+          foreignField: "_id",
+          as: "product"
+        }
+      },
+      { $unwind: "$product" },
+      {
+        $lookup: {
+          from: "vendors",
+          localField: "vendorIds",
+          foreignField: "_id",
+          as: "vendors"
+        }
+      },
+      {
+        $lookup: {
+          from: "sales",
+          let: { lotId: "$_id" },
+          pipeline: [
+            { $match: { $expr: { $and: [ { $eq: ["$purchaseId", "$$lotId"] }, { $eq: ["$isDeleted", false] } ] } } },
+            { $sort: { date: 1 } },
+            {
+              $lookup: {
+                from: "customers",
+                localField: "customerId",
+                foreignField: "_id",
+                as: "customer"
+              }
+            },
+            { $unwind: { path: "$customer", preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                saleId: { $toString: "$_id" },
+                date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+                customerName: { $ifNull: ["$customer.name", "Unknown"] },
+                quantity: 1,
+                rate: 1,
+                total: "$totalAmount"
+              }
+            }
+          ],
+          as: "sales"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          lotId: { $toString: "$_id" },
+          date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+          productName: "$product.name",
+          unitType: "$product.unitType",
+          lotName: 1,
+          vendorNames: 1,
+          vendorName: {
+            $cond: [
+              { $gt: [{ $size: "$vendorNames" }, 0] },
+              { $reduce: { input: "$vendorNames", initialValue: "", in: { $concat: ["$$value", { $cond: [{ $eq: ["$$value", ""] }, "", ", "] }, "$$this"] } } },
+              "N/A"
+            ]
+          },
+          purchasedQty: "$quantity",
+          purchasedRate: "$rate",
+          purchasedTotal: "$totalAmount",
+          sales: 1,
+          totalSoldQty: { $sum: "$sales.quantity" },
+          remainingQty: "$remainingQty",
+          notes: 1
+        }
       }
-    }).filter(Boolean);
+    ]);
 
     return { success: true, data: JSON.parse(JSON.stringify(detailedRows)) };
   } catch (error: any) {

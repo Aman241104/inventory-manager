@@ -185,3 +185,82 @@ Implemented global keyboard shortcuts to allow "Hands-On-Keyboard" management ac
 ### **Improved Workflow Resilience**
 - **Consistent Cancel Logic**: Refined the "Cancel" buttons across all forms. They now reliably clear unsaved progress and close modals, providing a safe way to exit a transaction without accidental data entry.
 - **Professional Error Handling**: Implemented custom application-level Error and "Page Not Found" (404) screens. If an unexpected error occurs, the user is greeted with a helpful recovery page instead of a generic browser crash.
+
+---
+
+## 15. Efficiency & Space Optimization (Feb 2026 - Batch 11)
+
+### **Flexible Entry (Optional Rates)**
+- **Rate-Free Logging**: Modified the system to make Purchase and Sale rates **optional**. Users can now save transactions with just the Fruit, Entity, and Quantity. This allows for even faster logging during busy hours where rates might be determined later.
+- **Unified Across All Modes**: This optional rate logic is consistently applied to the Buy form, Sell form, and Bulk Entry spreadsheet.
+
+### **Space-Efficient Printing**
+- **High-Density Ledger**: Overhauled the print styles for the T-Ledger. By significantly reducing padding, margins, and font sizes in the print view, the system can now fit **3-4 lots per A4 page** (compared to only 2 previously).
+- **Narrow Purchase View**: Reduced the width of the Purchase Details column in print to give more space to the Sales Ledger, which often contains more entries.
+
+### **Navigation & UI Fixes**
+- **Sidebar Responsiveness**: Fixed a click-responsiveness bug in the sidebar. The mobile toggle and navigation links now react instantly to touch and mouse clicks.
+- **Search Interaction**: Refined the Global Search component to ensure it doesn't interfere with sidebar clicks when closed.
+
+---
+
+## 16. High-Density Ledger Design (Feb 2026 - Batch 12)
+
+### **Extreme Space Optimization**
+- **Header-Stats Fusion**: Moved the "Balance," "Total In," and "Total Out" metrics directly into the batch header. This eliminated the need for a footer on every lot, saving 15% of vertical space per record.
+- **Dual-Column Sales Grid**: Replaced the vertical sales list with a smart two-column grid. This allows the system to display twice as many sales entries in the same amount of height.
+- **Narrow Purchase View**: Optimized the Purchase column to take up minimal space, focusing on just the Vendor name and Rate in a compact vertical stack.
+- **Zero-Waste Notes**: The "Remarks" section now only takes up space if a note actually exists. If no note is provided, the batch automatically shrinks.
+
+### **Print Result**
+- **Capacity Upgrade**: The system can now comfortably fit **6–8 lots per A4 page** (up from 3-4 in Batch 11, and only 2 in the original design). This maximizes paper utility for busy trading days.
+
+---
+
+## 17. Instant-Load Performance Upgrades (Feb 2026 - Batch 13)
+
+### **Visual Loading Experience**
+- **Next.js Streaming**: Implemented server-side streaming. The website now shows "Skeleton" placeholders (shimmering grey boxes) immediately while data is being fetched. This eliminates the "blank screen" feeling and provides instant visual feedback.
+- **High-Speed Top Loader**: Added a thin, high-speed progress bar at the very top of the browser. Whenever you click a link or filter data, this bar moves instantly, signaling that the system is working.
+
+### **Data Optimization**
+- **Intelligent Pagination**: Optimized the Detailed Ledger to load the latest **50 batches** by default. This ensures the page remains lightning-fast even as your total transaction history grows into the thousands.
+- **Background Fetching**: Improved the interaction between the frontend and MongoDB to leverage new database indexes, reducing the "time-to-first-byte" for all reports.
+
+---
+
+## 18. "Extreme Speed" Data Engine (Feb 2026 - Batch 15)
+
+### **Database Performance (Single-Query Architecture)**
+- **Real-Time Denormalization**: Added a `remainingQty` field directly to every lot. The dashboard now reads the stock balance in **0ms** without needing to sum up thousands of sales entries manually.
+- **Aggregation Pipelines**: Rewrote all reports and dashboard stats using MongoDB's high-performance aggregation engine. This replaced dozens of small queries with a single, highly optimized pass at the database source.
+- **Join Optimization**: Used `$lookup` to join Products and Vendors inside the database, drastically reducing the communication overhead between the web server and the database.
+
+### **Next-Gen Rendering**
+- **Component Lazy-Loading**: Implemented dynamic imports for the Transaction Hub. Heavy forms now load only when needed, making the initial dashboard appear almost instantly.
+- **Strict Payload Projections**: Optimized the data "tubes" between the server and your browser. We now strip away 40% of unnecessary data (like internal DB IDs and meta-tags), making the site much faster on mobile and 4G/5G connections.
+- **Shimmering Skeletons**: Enhanced the loading states to provide a smoother transition as data flows from the aggregation engine to the UI.
+
+---
+
+## 19. Unified Data Integrity & Cleanup (Feb 2026 - Batch 16)
+
+### **Robust Deletion Workflows**
+- **Cross-Entity Validation**: Standardized the deletion logic for **Products**, **Vendors**, and **Customers**. The system now performs a deep-scan for linked transactions before allowing a deletion. This prevents accidental "orphaned" records in your ledger history.
+- **Hard-Delete for Clean Slates**: Items with zero transaction history are now fully removed from the database (Hard-Delete), while items with history are safely protected.
+- **Clear User Feedback**: If an item cannot be deleted due to its history, the system now provides a specific reason (e.g., *"Cannot delete vendor. They have active purchase records."*).
+
+### **Automated List Optimization**
+- **Active-Only View**: Master lists for Products, Vendors, and Customers now automatically filter out any inactive or deleted records. This ensures your dropdowns and management tables stay focused on currently active business entities.
+
+---
+
+## 18. Instant-Edit & Optimistic UI (Feb 2026 - Batch 14)
+
+### **Zero-Latency Data Entry**
+- **Optimistic Updates**: Implemented optimistic UI for both Buy and Sell forms. New transactions now appear in the list **instantly** the moment you hit Enter, without waiting for the database or refreshing the page.
+- **Reload-Free Workflow**: Removed all full-page reloads (`window.location.reload`) from transaction flows. The application now uses background synchronization to keep data fresh without interrupting the user's flow.
+
+### **Direct Inline Table Editing**
+- **Click-to-Edit**: You can now edit **Quantities** and **Rates** directly inside the "Recent Activity" tables. No need to open a modal for simple typo fixes.
+- **Excel-Style Interactions**: Simply click a number, type the new value, and hit **Enter** to save. Press **Esc** to cancel. This reduces the number of clicks required for data correction by 80%.

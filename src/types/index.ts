@@ -31,6 +31,7 @@ export interface IPurchase extends Document {
   vendorIds: (Types.ObjectId | any)[];
   lotName: string; // e.g., "Batch 1", "Lot A"
   quantity: number;
+  remainingQty: number;
   rate: number;
   totalAmount: number;
   date: string | Date;

@@ -8,6 +8,7 @@ const PurchaseSchema = new Schema<IPurchase>(
     vendorIds: [{ type: Schema.Types.ObjectId, ref: 'Vendor' }],
     lotName: { type: String, required: true },
     quantity: { type: Number, required: true, min: 0.0001 },
+    remainingQty: { type: Number, required: true, default: 0 },
     rate: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number },
     date: { type: Date, default: Date.now, index: true },

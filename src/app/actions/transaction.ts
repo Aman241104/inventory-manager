@@ -37,9 +37,9 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
     });
 
     if (existingLot) {
-      // Clubbing logic: Add quantity, update rate (maybe weighted average or just latest?)
-      // User requested "clubbing" so they see 100 total.
+      // Clubbing logic: Add quantity, update rate
       existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
+      existingLot.remainingQty = Number(existingLot.remainingQty) + Number(data.quantity);
       
       // Update rate to the latest one
       if (data.rate !== undefined) {
@@ -67,6 +67,7 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
         vendorIds: data.vendorId ? [new mongoose.Types.ObjectId(data.vendorId)] : [],
         vendorNames: vendor ? [vendorName] : [],
         lotName: lotName,
+        remainingQty: Number(data.quantity),
         date: purchaseDate
       });
       await purchase.save();
@@ -121,7 +122,12 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
 
     const savedSale = await sale.save();
 
-        revalidatePath("/details");
+    // Update remainingQty on the lot
+    await Purchase.findByIdAndUpdate(lotId, { 
+      $inc: { remainingQty: -Number(data.quantity) } 
+    });
+
+    revalidatePath("/transactions");
         revalidatePath("/");
         return { success: true, isExtraSold, data: JSON.parse(JSON.stringify(savedSale)) };
       } catch (error) {
@@ -133,6 +139,18 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
     export async function updateSale(id: string, data: Partial<ISale>) {
       try {
         await connectDB();
+        
+        // If quantity is changing, we need to adjust the lot's remainingQty
+        if (data.quantity !== undefined) {
+          const oldSale = await Sale.findById(id);
+          if (oldSale) {
+            const diff = Number(data.quantity) - oldSale.quantity;
+            await Purchase.findByIdAndUpdate(oldSale.purchaseId, {
+              $inc: { remainingQty: -diff }
+            });
+          }
+        }
+
         const updateData: any = { ...data };
         
         if (data.productId) updateData.productId = new mongoose.Types.ObjectId(data.productId);
@@ -219,10 +237,12 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
               isExtraSold: false
             });
         
-            await sale.save();
-        
-                revalidatePath("/details");
-                revalidatePath("/");
+                await sale.save();
+            
+                // Zero out the remainingQty on the lot
+                await Purchase.findByIdAndUpdate(lotId, { remainingQty: 0 });
+            
+                revalidatePath("/details");                revalidatePath("/");
                 return { success: true };
               } catch (error) {
                 console.error("Write off error:", error);

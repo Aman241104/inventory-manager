@@ -13,7 +13,7 @@ export async function getCustomers() {
   if (USE_MOCK) return { success: true, data: MOCK_CUSTOMERS };
   try {
     await connectDB();
-    const customers = await Customer.find({}).sort({ createdAt: -1 }).lean();
+    const customers = await Customer.find({ isActive: true }).sort({ createdAt: -1 }).lean();
 
     const customersWithStats = await Promise.all(customers.map(async (c: any) => {
       const distinctLotsSold = await Sale.aggregate([
@@ -65,8 +65,25 @@ export async function deleteCustomer(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
+    
+    // Check for existing transactions
+    const hasSales = await Sale.findOne({ customerId: id, isDeleted: false });
+    
+    if (hasSales) {
+      return { 
+        success: false, 
+        error: "Cannot delete customer. They have active purchase records. Delete sales first." 
+      };
+    }
+
+    // Soft delete if no transactions
     await Customer.findByIdAndUpdate(id, { isActive: false });
-    revalidatePath("/customers");
+    
+    try {
+      revalidatePath("/customers");
+    } catch (e) {
+      // Ignore revalidation errors in non-next contexts
+    }
     return { success: true };
   } catch (error) {
     console.error("Failed to delete customer:", error);

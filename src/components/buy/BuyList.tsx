@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
+import EditableCell from "@/components/ui/EditableCell";
 import { addPurchase, addVendorAction, addProductAction, updatePurchase } from "@/app/actions/transaction";
 import { deleteLot } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default function BuyList({
   initialPurchases,
@@ -25,6 +27,7 @@ export default function BuyList({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [purchases, setPurchases] = useState(initialPurchases);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -64,6 +67,10 @@ export default function BuyList({
   const vendorSelectRef = React.useRef<HTMLInputElement>(null);
   const qtyInputRef = React.useRef<HTMLInputElement>(null);
   const rateInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    setPurchases(initialPurchases);
+  }, [initialPurchases]);
 
   React.useEffect(() => {
     if (successMessage) {
@@ -108,6 +115,23 @@ export default function BuyList({
   const handleSubmit = async (e: React.FormEvent | null, addAnother = false) => {
     if (e) e.preventDefault();
     setLoading(true);
+
+    // Optimistic Entry
+    const tempId = `temp-${new Date().getTime()}`;
+    const optimisticEntry = {
+      _id: tempId,
+      productId: products.find(p => p._id === formData.productId),
+      vendorId: vendors.find(v => v._id === formData.vendorId),
+      vendorNames: [vendors.find(v => v._id === formData.vendorId)?.name],
+      lotName: "Saving...",
+      quantity: Number(formData.quantity),
+      rate: Number(formData.rate) || 0,
+      date: formData.date,
+      isOptimistic: true
+    };
+
+    setPurchases(prev => [optimisticEntry, ...prev]);
+
     const result = await addPurchase({
       ...formData,
       quantity: Number(formData.quantity),
@@ -124,15 +148,14 @@ export default function BuyList({
         lotName: "Batch 1",
         quantity: "",
         rate: "",
-        date: new Date().toISOString().split('T')[0],
+        date: formData.date,
         notes: ""
       });
       router.refresh();
       if (onSuccess) onSuccess();
-      if (!addAnother) {
-        if (!isInline) setTimeout(() => window.location.reload(), 500);
-        else router.refresh();
-      }
+    } else {
+      setPurchases(initialPurchases); // Rollback
+      alert(result.error);
     }
     setLoading(false);
   };
@@ -299,7 +322,7 @@ export default function BuyList({
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Purchase Rate</label>
               <input
                 ref={rateInputRef}
-                type="number" required min="0" step="any" value={formData.rate}
+                type="number" min="0" step="any" value={formData.rate}
                 onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
                 onKeyDown={(e) => handleKeyDown(e)}
                 className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
@@ -465,10 +488,10 @@ export default function BuyList({
         )}
       </div>
 
-      {initialPurchases.length > 0 && (
+      {purchases.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Recent Purchases ({initialPurchases.length})</CardTitle>
+            <CardTitle>Recent Purchases ({purchases.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -485,8 +508,11 @@ export default function BuyList({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {initialPurchases.map((p) => (
-                    <tr key={p._id} className="hover:bg-slate-50/50 transition-colors">
+                  {purchases.map((p) => (
+                    <tr key={p._id} className={cn(
+                      "hover:bg-slate-50/50 transition-colors",
+                      p.isOptimistic && "opacity-50 grayscale animate-pulse"
+                    )}>
                       <td className="px-4 py-4 text-sm text-slate-500">
                         {new Date(p.date).toLocaleDateString()}
                       </td>
@@ -499,15 +525,31 @@ export default function BuyList({
                           ? p.vendorNames.join(", ") 
                           : (p.vendorIds?.map((v: any) => v.name).join(", ") || "N/A")}
                       </td>
-                      <td className="px-4 py-4 text-sm font-semibold text-indigo-600">{p.quantity}</td>
-                      <td className="px-4 py-4 text-sm text-right">₹{p.rate}</td>
+                      <td className="px-4 py-4 text-sm font-semibold text-indigo-600">
+                        <EditableCell 
+                          value={p.quantity} 
+                          onSave={async (val) => {
+                            await updatePurchase(p._id, { quantity: val });
+                          }}
+                          className="text-indigo-600"
+                        />
+                      </td>
+                      <td className="px-4 py-4 text-sm text-right">
+                        <EditableCell 
+                          value={p.rate} 
+                          prefix="₹"
+                          onSave={async (val) => {
+                            await updatePurchase(p._id, { rate: val });
+                          }}
+                        />
+                      </td>
                       <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{p.quantity * p.rate}</td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex justify-center gap-2">
-                          <button onClick={() => handleOpenEdit(p)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
+                          <button onClick={() => handleOpenEdit(p)} disabled={p.isOptimistic} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-0">
                             <Edit2 size={16} />
                           </button>
-                          <button onClick={() => handleDelete(p._id)} className="p-1 text-slate-400 hover:text-rose-600 transition-colors">
+                          <button onClick={() => handleDelete(p._id)} disabled={p.isOptimistic} className="p-1 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-0">
                             <Trash2 size={16} />
                           </button>
                         </div>

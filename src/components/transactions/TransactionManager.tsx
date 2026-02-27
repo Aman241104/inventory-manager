@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import {
   Plus,
   ShoppingCart,
@@ -15,9 +16,15 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import BuyList from "@/components/buy/BuyList";
-import SellList from "@/components/sell/SellList";
-import BulkEntry from "@/components/transactions/BulkEntry";
+const BuyList = dynamic(() => import("@/components/buy/BuyList"), { 
+  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" /> 
+});
+const SellList = dynamic(() => import("@/components/sell/SellList"), { 
+  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" /> 
+});
+const BulkEntry = dynamic(() => import("@/components/transactions/BulkEntry"), { 
+  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" /> 
+});
 
 export default function TransactionManager({
   products,

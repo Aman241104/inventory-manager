@@ -3,8 +3,10 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import GlobalShortcuts from "@/components/layout/GlobalShortcuts";
+import TopLoader from "@/components/ui/TopLoader";
 import { cn } from "@/lib/utils";
 import { Apple } from "lucide-react";
+import { Suspense } from "react";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,6 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={cn(inter.className, "bg-slate-50 text-slate-900")}>
+        <Suspense fallback={null}>
+          <TopLoader />
+        </Suspense>
         <GlobalShortcuts />
         <div className="flex min-h-screen">
           <Sidebar />

@@ -76,16 +76,21 @@ export default function GlobalSearch() {
   };
 
   if (!isOpen) return (
-    <button 
-      onClick={() => setIsOpen(true)}
-      className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg transition-all text-xs border border-slate-200 w-full mb-4 group"
-    >
-      <Search size={14} className="group-hover:text-indigo-600" />
-      <span>Search anything...</span>
-      <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-white px-1.5 font-mono text-[10px] font-medium text-slate-400">
-        <span className="text-xs">⌘</span>K
-      </kbd>
-    </button>
+    <div className="px-1">
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(true);
+        }}
+        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg transition-all text-xs border border-slate-200 w-full mb-4 group"
+      >
+        <Search size={14} className="group-hover:text-indigo-600" />
+        <span>Search anything...</span>
+        <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-white px-1.5 font-mono text-[10px] font-medium text-slate-400">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </button>
+    </div>
   );
 
   return (

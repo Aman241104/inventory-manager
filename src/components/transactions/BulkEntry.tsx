@@ -67,7 +67,7 @@ export default function BulkEntry({
   };
 
   const validRowsCount = rows.filter(r => {
-    const basic = r.productId && Number(r.quantity) > 0 && r.rate !== "";
+    const basic = r.productId && Number(r.quantity) > 0;
     if (r.type === "sell") return basic && r.customerId && r.purchaseId;
     return basic && r.vendorId;
   }).length;
@@ -217,7 +217,7 @@ export default function BulkEntry({
                       <input 
                         type="number" 
                         value={row.rate} 
-                        placeholder="0"
+                        placeholder="Rate"
                         onChange={(e) => updateRow(row.id, "rate", e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500"
                       />
