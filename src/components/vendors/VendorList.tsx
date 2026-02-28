@@ -5,9 +5,11 @@ import { Plus, Search, Edit2, Power, Phone, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { useRouter } from "next/navigation";
 import { addVendor, updateVendor, toggleVendorStatus, deleteVendor } from "@/app/actions/vendor";
 
 export default function VendorList({ initialVendors }: { initialVendors: any[] }) {
+  const router = useRouter();
   const [vendors, setVendors] = useState(initialVendors);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<any>(null);
@@ -49,7 +51,16 @@ export default function VendorList({ initialVendors }: { initialVendors: any[] }
 
     if (result.success) {
       setIsModalOpen(false);
-      window.location.reload();
+
+      if (editingVendor) {
+        setVendors(prev => prev.map(v => v._id === editingVendor._id ? { ...v, ...formData } : v));
+      } else if ('vendor' in result && result.vendor) {
+        setVendors(prev => [result.vendor, ...prev]);
+      }
+
+      router.refresh();
+    } else {
+      alert("Failed to save vendor");
     }
     setLoading(false);
   };

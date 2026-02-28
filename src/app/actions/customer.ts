@@ -35,13 +35,22 @@ export async function getCustomers() {
 }
 
 export async function addCustomer(formData: { name: string; contact: string }) {
-  if (USE_MOCK) return { success: true };
+  if (USE_MOCK) return { success: true, customer: { _id: Date.now().toString(), ...formData, isActive: true, activeLotsCount: 0 } };
   try {
     await connectDB();
     const newCustomer = new Customer(formData);
     await newCustomer.save();
-    try { revalidatePath("/customers"); } catch (e) {}
-    return { success: true };
+    try { revalidatePath("/customers"); } catch (e) { }
+    return {
+      success: true,
+      customer: {
+        name: newCustomer.name,
+        contact: newCustomer.contact,
+        _id: newCustomer._id.toString(),
+        isActive: newCustomer.isActive !== undefined ? newCustomer.isActive : true,
+        activeLotsCount: 0
+      }
+    };
   } catch (error) {
     console.error("Failed to add customer:", error);
     return { success: false, error: "Failed to add customer" };
@@ -49,12 +58,12 @@ export async function addCustomer(formData: { name: string; contact: string }) {
 }
 
 export async function updateCustomer(id: string, formData: { name: string; contact: string }) {
-  if (USE_MOCK) return { success: true };
+  if (USE_MOCK) return { success: true, formData };
   try {
     await connectDB();
     await Customer.findByIdAndUpdate(id, formData);
-    try { revalidatePath("/customers"); } catch (e) {}
-    return { success: true };
+    try { revalidatePath("/customers"); } catch (e) { }
+    return { success: true, formData };
   } catch (error) {
     console.error("Failed to update customer:", error);
     return { success: false, error: "Failed to update customer" };
@@ -65,11 +74,11 @@ export async function deleteCustomer(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
-    
+
     // Soft delete
     await Customer.findByIdAndUpdate(id, { isDeleted: true });
-    
-    try { revalidatePath("/customers"); } catch (e) {}
+
+    try { revalidatePath("/customers"); } catch (e) { }
     return { success: true };
   } catch (error) {
     console.error("Failed to delete customer:", error);
@@ -81,7 +90,7 @@ export async function toggleCustomerStatus(id: string, isActive: boolean) {
   try {
     await connectDB();
     await Customer.findByIdAndUpdate(id, { isActive });
-    try { revalidatePath("/customers"); } catch (e) {}
+    try { revalidatePath("/customers"); } catch (e) { }
     return { success: true };
   } catch (error) {
     return { success: false, error: "Failed to update customer" };

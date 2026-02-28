@@ -5,6 +5,7 @@ import { Plus, Search, Edit2, Power, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { useRouter } from "next/navigation";
 import { addProduct, updateProduct, toggleProductStatus, deleteProduct } from "@/app/actions/product";
 
 interface ProductListProps {
@@ -12,6 +13,7 @@ interface ProductListProps {
 }
 
 export default function ProductList({ initialProducts }: ProductListProps) {
+  const router = useRouter();
   const [products, setProducts] = useState(initialProducts);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -61,8 +63,18 @@ export default function ProductList({ initialProducts }: ProductListProps) {
 
     if (result.success) {
       setIsModalOpen(false);
-      // Let Next.js revalidate, but we can also reload or wait for refresh
-      window.location.reload();
+
+      // Update local state instantly for a much faster feel
+      if (editingProduct) {
+        setProducts(prev => prev.map(p => p._id === editingProduct._id ? { ...p, ...formData } : p));
+      } else if ('product' in result && result.product) {
+        setProducts(prev => [result.product, ...prev]);
+      }
+
+      // Then revalidate next.js server state in background without page reload
+      router.refresh();
+    } else {
+      alert("Failed to save product.");
     }
     setLoading(false);
   };

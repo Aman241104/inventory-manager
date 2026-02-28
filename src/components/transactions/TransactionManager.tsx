@@ -14,16 +14,17 @@ import {
   Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-const BuyList = dynamic(() => import("@/components/buy/BuyList"), { 
-  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" /> 
+const BuyList = dynamic(() => import("@/components/buy/BuyList"), {
+  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" />
 });
-const SellList = dynamic(() => import("@/components/sell/SellList"), { 
-  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" /> 
+const SellList = dynamic(() => import("@/components/sell/SellList"), {
+  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" />
 });
-const BulkEntry = dynamic(() => import("@/components/transactions/BulkEntry"), { 
-  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" /> 
+const BulkEntry = dynamic(() => import("@/components/transactions/BulkEntry"), {
+  loading: () => <div className="h-96 bg-slate-100/50 animate-pulse rounded-3xl" />
 });
 
 export default function TransactionManager({
@@ -39,6 +40,7 @@ export default function TransactionManager({
   initialPurchases: any[],
   initialSales: any[]
 }) {
+  const router = useRouter();
   const [activeType, setActiveType] = useState<"buy" | "sell" | "bulk" | "split">("buy");
 
   // Keyboard Shortcuts
@@ -71,8 +73,8 @@ export default function TransactionManager({
   }, []);
 
   const handleSuccess = () => {
-    // Small timeout to allow Next.js cache to revalidate and then force a reload
-    setTimeout(() => window.location.reload(), 300);
+    // Revalidate Next.js cache in the background instead of a full reload
+    router.refresh();
   };
 
   const activeProducts = products.filter(p => p.isActive);

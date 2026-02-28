@@ -13,7 +13,7 @@ export async function getVendors() {
   try {
     await connectDB();
     const vendors = await Vendor.find({ isDeleted: false }).sort({ createdAt: -1 }).lean();
-    
+
     const vendorsWithStats = await Promise.all(vendors.map(async (v: any) => {
       const activeLots = await Purchase.countDocuments({ vendorIds: v._id, isDeleted: false });
       return {
@@ -31,13 +31,22 @@ export async function getVendors() {
 }
 
 export async function addVendor(formData: { name: string; contact: string }) {
-  if (USE_MOCK) return { success: true };
+  if (USE_MOCK) return { success: true, vendor: { _id: Date.now().toString(), ...formData, isActive: true, activeLotsCount: 0 } };
   try {
     await connectDB();
     const newVendor = new Vendor(formData);
     await newVendor.save();
-    try { revalidatePath("/vendors"); } catch (e) {}
-    return { success: true };
+    try { revalidatePath("/vendors"); } catch (e) { }
+    return {
+      success: true,
+      vendor: {
+        name: newVendor.name,
+        contact: newVendor.contact,
+        _id: newVendor._id.toString(),
+        isActive: newVendor.isActive !== undefined ? newVendor.isActive : true,
+        activeLotsCount: 0
+      }
+    };
   } catch (error) {
     console.error("Failed to add vendor:", error);
     return { success: false, error: "Failed to add vendor" };
@@ -45,12 +54,12 @@ export async function addVendor(formData: { name: string; contact: string }) {
 }
 
 export async function updateVendor(id: string, formData: { name: string; contact: string }) {
-  if (USE_MOCK) return { success: true };
+  if (USE_MOCK) return { success: true, formData };
   try {
     await connectDB();
     await Vendor.findByIdAndUpdate(id, formData);
-    try { revalidatePath("/vendors"); } catch (e) {}
-    return { success: true };
+    try { revalidatePath("/vendors"); } catch (e) { }
+    return { success: true, formData };
   } catch (error) {
     console.error("Failed to update vendor:", error);
     return { success: false, error: "Failed to update vendor" };
@@ -64,8 +73,8 @@ export async function deleteVendor(id: string) {
 
     // Soft delete
     await Vendor.findByIdAndUpdate(id, { isDeleted: true });
-    
-    try { revalidatePath("/vendors"); } catch (e) {}
+
+    try { revalidatePath("/vendors"); } catch (e) { }
     return { success: true };
   } catch (error) {
     console.error("Failed to delete vendor:", error);
@@ -77,7 +86,7 @@ export async function toggleVendorStatus(id: string, isActive: boolean) {
   try {
     await connectDB();
     await Vendor.findByIdAndUpdate(id, { isActive });
-    try { revalidatePath("/vendors"); } catch (e) {}
+    try { revalidatePath("/vendors"); } catch (e) { }
     return { success: true };
   } catch (error) {
     return { success: false, error: "Failed to update vendor" };

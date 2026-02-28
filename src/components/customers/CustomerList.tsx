@@ -5,9 +5,11 @@ import { Plus, Search, Edit2, Power, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { useRouter } from "next/navigation";
 import { addCustomer, updateCustomer, toggleCustomerStatus, deleteCustomer } from "@/app/actions/customer";
 
 export default function CustomerList({ initialCustomers }: { initialCustomers: any[] }) {
+  const router = useRouter();
   const [customers, setCustomers] = useState(initialCustomers);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
@@ -49,7 +51,18 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
 
     if (result.success) {
       setIsModalOpen(false);
-      window.location.reload();
+
+      // Update local state instantly for a much faster feel
+      if (editingCustomer) {
+        setCustomers(prev => prev.map(c => c._id === editingCustomer._id ? { ...c, ...formData } : c));
+      } else if ('customer' in result && result.customer) {
+        setCustomers(prev => [result.customer, ...prev]);
+      }
+
+      // Revalidate in background without full reload
+      router.refresh();
+    } else {
+      alert("Failed to save customer");
     }
     setLoading(false);
   };

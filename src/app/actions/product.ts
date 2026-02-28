@@ -46,13 +46,23 @@ export async function getProducts() {
 }
 
 export async function addProduct(formData: { name: string; unitType: string }) {
-  if (USE_MOCK) return { success: true };
+  if (USE_MOCK) return { success: true, product: { _id: Date.now().toString(), ...formData, isActive: true, totalBatches: 0, lastTransaction: null } };
   try {
     await connectDB();
     const newProduct = new Product(formData);
     await newProduct.save();
-    try { revalidatePath("/products"); } catch (e) {}
-    return { success: true };
+    try { revalidatePath("/products"); } catch (e) { }
+    return {
+      success: true,
+      product: {
+        name: newProduct.name,
+        unitType: newProduct.unitType,
+        _id: newProduct._id.toString(),
+        isActive: newProduct.isActive !== undefined ? newProduct.isActive : true,
+        totalBatches: 0,
+        lastTransaction: null
+      }
+    };
   } catch (error) {
     console.error("Failed to add product:", error);
     return { success: false, error: "Failed to add product" };
@@ -60,12 +70,12 @@ export async function addProduct(formData: { name: string; unitType: string }) {
 }
 
 export async function updateProduct(id: string, formData: Partial<IProduct>) {
-  if (USE_MOCK) return { success: true };
+  if (USE_MOCK) return { success: true, formData };
   try {
     await connectDB();
     await Product.findByIdAndUpdate(id, formData);
-    try { revalidatePath("/products"); } catch (e) {}
-    return { success: true };
+    try { revalidatePath("/products"); } catch (e) { }
+    return { success: true, formData };
   } catch (error) {
     console.error("Failed to update product:", error);
     return { success: false, error: "Failed to update product" };
@@ -76,13 +86,13 @@ export async function deleteProduct(id: string) {
   if (USE_MOCK) return { success: true };
   try {
     await connectDB();
-    
+
     // Soft delete
     await Product.findByIdAndUpdate(id, { isDeleted: true });
-    
+
     try {
       revalidatePath("/products");
-    } catch (e) {}
+    } catch (e) { }
     return { success: true };
   } catch (error) {
     console.error("Failed to delete product:", error);
@@ -94,7 +104,7 @@ export async function toggleProductStatus(id: string, isActive: boolean) {
   try {
     await connectDB();
     await Product.findByIdAndUpdate(id, { isActive });
-    try { revalidatePath("/products"); } catch (e) {}
+    try { revalidatePath("/products"); } catch (e) { }
     return { success: true };
   } catch (error) {
     console.error("Failed to toggle product status:", error);
