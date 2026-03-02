@@ -27,7 +27,7 @@ export async function deleteLot(id: string) {
 export async function deleteSale(id: string) {
   try {
     await connectDB();
-    
+
     // Get sale info before deleting to restore stock
     const sale = await Sale.findById(id);
     if (sale) {
@@ -53,7 +53,7 @@ export async function getDetailedReport(filters: {
 }) {
   try {
     await connectDB();
-    
+
     const matchQuery: any = { isDeleted: false };
     if (filters.productId) matchQuery.productId = new mongoose.Types.ObjectId(filters.productId);
     if (filters.fromDate || filters.toDate) {
@@ -92,7 +92,7 @@ export async function getDetailedReport(filters: {
           from: "sales",
           let: { lotId: "$_id" },
           pipeline: [
-            { $match: { $expr: { $and: [ { $eq: ["$purchaseId", "$$lotId"] }, { $eq: ["$isDeleted", false] } ] } } },
+            { $match: { $expr: { $and: [{ $eq: ["$purchaseId", "$$lotId"] }, { $eq: ["$isDeleted", false] }] } } },
             { $sort: { date: 1 } },
             {
               $lookup: {
@@ -139,7 +139,7 @@ export async function getDetailedReport(filters: {
           purchasedTotal: "$totalAmount",
           sales: 1,
           totalSoldQty: { $sum: "$sales.quantity" },
-          remainingQty: "$remainingQty",
+          remainingQty: { $subtract: ["$quantity", { $sum: "$sales.quantity" }] },
           notes: 1
         }
       }

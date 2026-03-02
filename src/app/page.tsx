@@ -16,6 +16,8 @@ import {
   AlertTriangle
 } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const today = new Date().toISOString().split('T')[0];
 
@@ -162,11 +164,11 @@ export default async function HomePage() {
 
         <Card className="overflow-hidden border-slate-200 shadow-xl shadow-slate-200/50 rounded-2xl">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[1000px]">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+              <table className="w-full text-left border-collapse min-w-[1200px]">
                 <thead>
                   <tr className="bg-white border-b-2 border-slate-100 text-slate-400">
-                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-100 sticky left-0 bg-white z-20">Fruit / Lot</th>
+                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-100 sticky left-0 bg-white z-30">Fruit / Lot</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest bg-white">Age</th>
                     <th className="px-6 py-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest border-r border-slate-100 bg-emerald-50/50">Purchased</th>
 

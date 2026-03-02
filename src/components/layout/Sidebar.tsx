@@ -12,7 +12,8 @@ import {
   FileText,
   Menu,
   X,
-  Settings
+  Settings,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import GlobalSearch from "./GlobalSearch";
@@ -21,6 +22,7 @@ import ShortcutHelp from "./ShortcutHelp";
 const navItems = [
   { label: "Today's Hub", href: "/", icon: Zap },
   { label: "Detailed Ledger", href: "/details", icon: FileText },
+  { label: "Trash Bin", href: "/trash", icon: Trash2 },
 ];
 
 const manageItems = [

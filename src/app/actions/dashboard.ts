@@ -26,13 +26,15 @@ export async function getDashboardStats() {
         }
       },
       { $unwind: "$product" },
+      // Bug 1.5 Fix: Ensure product itself is not deleted
+      { $match: { "product.isDeleted": false } },
       // Join Sales info
       {
         $lookup: {
           from: "sales",
           let: { lotId: "$_id" },
           pipeline: [
-            { $match: { $expr: { $and: [ { $eq: ["$purchaseId", "$$lotId"] }, { $eq: ["$isDeleted", false] } ] } } },
+            { $match: { $expr: { $and: [{ $eq: ["$purchaseId", "$$lotId"] }, { $eq: ["$isDeleted", false] }] } } },
             { $sort: { date: 1 } },
             {
               $lookup: {
@@ -66,13 +68,20 @@ export async function getDashboardStats() {
           purchaseRate: "$rate",
           date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
           totalPurchased: "$quantity",
-          remainingStock: "$remainingQty",
+          remainingStock: { $subtract: ["$quantity", { $sum: "$sales.quantity" }] },
           sales: 1,
           status: {
-            $cond: [
-              { $gt: ["$remainingQty", 0] }, "REMAINING",
-              { $cond: [ { $lt: ["$remainingQty", 0] }, "EXTRA_SOLD", "OK" ] }
-            ]
+            $let: {
+              vars: {
+                calcRemaining: { $subtract: ["$quantity", { $sum: "$sales.quantity" }] }
+              },
+              in: {
+                $cond: [
+                  { $gt: ["$$calcRemaining", 0.0001] }, "REMAINING", // Bug 1.3 Fix: Use threshold for precision
+                  { $cond: [{ $lt: ["$$calcRemaining", -0.0001] }, "EXTRA_SOLD", "OK"] }
+                ]
+              }
+            }
           }
         }
       }
@@ -113,9 +122,9 @@ export async function searchAll(query: string) {
     const regex = new RegExp(query, "i");
 
     const [lots, customers] = await Promise.all([
-      Purchase.find({ 
+      Purchase.find({
         $or: [{ lotName: regex }, { vendorNames: regex }],
-        isDeleted: false 
+        isDeleted: false
       }).limit(5).populate("productId", "name").lean(),
       Customer.find({ name: regex, isActive: true }).limit(5).lean()
     ]);
