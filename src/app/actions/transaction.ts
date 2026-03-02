@@ -33,6 +33,24 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
       const existingLot = await Purchase.findById(data.targetLotId);
       if (!existingLot) return { success: false, error: "Target batch not found" };
 
+      // Record in history
+      if (!existingLot.appendHistory || existingLot.appendHistory.length === 0) {
+        existingLot.appendHistory = [{
+          date: existingLot.date as Date,
+          quantity: existingLot.quantity,
+          rate: existingLot.rate,
+          vendorNames: existingLot.vendorNames,
+          type: 'ORIGINAL'
+        }];
+      }
+      existingLot.appendHistory.push({
+        date: purchaseDate,
+        quantity: Number(data.quantity),
+        rate: Number(data.rate),
+        vendorNames: vendor ? [vendorName] : ["Unknown"],
+        type: 'APPEND'
+      });
+
       // Calculate weighted average rate
       const totalQty = existingLot.quantity + Number(data.quantity);
       const weightedRate = ((existingLot.quantity * existingLot.rate) + (Number(data.quantity) * Number(data.rate))) / totalQty;
@@ -58,6 +76,24 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
       });
 
       if (existingLot) {
+        // Record in history
+        if (!existingLot.appendHistory || existingLot.appendHistory.length === 0) {
+          existingLot.appendHistory = [{
+            date: existingLot.date as Date,
+            quantity: existingLot.quantity,
+            rate: existingLot.rate,
+            vendorNames: existingLot.vendorNames,
+            type: 'ORIGINAL'
+          }];
+        }
+        existingLot.appendHistory.push({
+          date: purchaseDate,
+          quantity: Number(data.quantity),
+          rate: Number(data.rate),
+          vendorNames: vendor ? [vendorName] : ["Unknown"],
+          type: 'APPEND'
+        });
+
         // Clubbing logic: Add quantity, update rate (Weighted average for auto-clubbing too)
         const totalQty = existingLot.quantity + Number(data.quantity);
         const weightedRate = ((existingLot.quantity * existingLot.rate) + (Number(data.quantity) * Number(data.rate))) / totalQty;
@@ -88,7 +124,14 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
           vendorNames: vendor ? [vendorName] : [],
           lotName: lotName,
           remainingQty: Number(data.quantity),
-          date: purchaseDate
+          date: purchaseDate,
+          appendHistory: [{
+            date: purchaseDate,
+            quantity: Number(data.quantity),
+            rate: Number(data.rate),
+            vendorNames: vendor ? [vendorName] : ["Unknown"],
+            type: 'ORIGINAL'
+          }]
         });
         await purchase.save();
       }
@@ -124,7 +167,7 @@ export async function addSale(data: Partial<ISale> & { date: string | Date }) {
     const lot = await Purchase.findOneAndUpdate(
       { _id: lotId },
       { $inc: { remainingQty: -Number(data.quantity) } },
-      { new: false } // We want the state BEFORE the decrement to calculate available
+      { returnDocument: 'before' } // We want the state BEFORE the decrement to calculate available
     );
 
     if (!lot) return { success: false, error: "Lot not found" };
@@ -311,7 +354,7 @@ export async function bulkAddTransactions(entries: any[]) {
         const lot = await Purchase.findOneAndUpdate(
           { _id: lotId },
           { $inc: { remainingQty: -Number(data.quantity) } },
-          { new: false }
+          { returnDocument: 'before' }
         );
 
         if (!lot) continue;
@@ -347,9 +390,14 @@ export async function bulkAddTransactions(entries: any[]) {
           isDeleted: false
         });
         if (existingLot) {
-          existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
+          // Calculate weighted average rate for bulk entries too
+          const totalQty = Number(existingLot.quantity) + Number(data.quantity);
+          const weightedRate = ((existingLot.quantity * existingLot.rate) + (Number(data.quantity) * (Number(data.rate) || 0))) / totalQty;
+
+          existingLot.quantity = totalQty;
           existingLot.remainingQty = Number(existingLot.remainingQty) + Number(data.quantity);
-          if (data.rate !== undefined) existingLot.rate = data.rate;
+          existingLot.rate = Number(weightedRate.toFixed(2));
+
           if (data.vendorId && !existingLot.vendorIds.some((id: any) => id.toString() === data.vendorId)) {
             existingLot.vendorIds.push(new mongoose.Types.ObjectId(data.vendorId));
             existingLot.vendorNames.push(vendorName);
@@ -555,6 +603,30 @@ export async function mergeLotsAction(sourceId: string, targetId: string) {
         target.vendorNames.push(name);
       }
     });
+
+    // Combined history
+    if (!target.appendHistory || target.appendHistory.length === 0) {
+      target.appendHistory = [{
+        date: target.date as Date,
+        quantity: target.quantity,
+        rate: target.rate,
+        vendorNames: target.vendorNames,
+        type: 'ORIGINAL'
+      }];
+    }
+
+    if (source.appendHistory && source.appendHistory.length > 0) {
+      target.appendHistory.push(...source.appendHistory);
+    } else {
+      // Fallback if source had no history
+      target.appendHistory.push({
+        date: source.date as Date,
+        quantity: source.quantity,
+        rate: source.rate,
+        vendorNames: source.vendorNames,
+        type: 'ORIGINAL'
+      });
+    }
 
     await target.save();
 

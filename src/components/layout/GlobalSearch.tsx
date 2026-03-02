@@ -82,13 +82,15 @@ export default function GlobalSearch() {
           e.stopPropagation();
           setIsOpen(true);
         }}
-        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg transition-all text-xs border border-slate-200 w-full mb-4 group"
+        className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-300 rounded-xl transition-all duration-200 text-xs border border-slate-700/50 hover:border-indigo-500/50 w-full mb-4 group shadow-inner"
       >
-        <Search size={14} className="group-hover:text-indigo-600" />
-        <span>Search anything...</span>
-        <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-white px-1.5 font-mono text-[10px] font-medium text-slate-400">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+        <Search size={14} className="group-hover:text-indigo-400 group-hover:scale-110 transition-transform" />
+        <span className="font-bold tracking-tight">Search anything...</span>
+        <div className="ml-auto flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+          <kbd className="inline-flex h-5 items-center gap-1 rounded bg-slate-900 px-1.5 font-mono text-[9px] font-black text-slate-500 border border-slate-700">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </div>
       </button>
     </div>
   );

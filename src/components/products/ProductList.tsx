@@ -183,24 +183,24 @@ export default function ProductList({ initialProducts }: ProductListProps) {
                           {product.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600 font-bold">
+                      <td className="px-4 py-4 text-sm text-slate-600 font-black text-indigo-600">
                         {product.totalBatches || 0}
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-500">
-                        {product.lastTransaction ? new Date(product.lastTransaction).toLocaleDateString() : "Never"}
+                      <td className="px-4 py-4 text-sm text-slate-500 font-medium italic">
+                        {product.lastTransaction ? new Date(product.lastTransaction).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' }) : "—"}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           <button
                             onClick={() => handleToggleStatus(product._id, product.isActive)}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                             title={product.isActive ? "Deactivate" : "Activate"}
                           >
                             <Power size={16} />
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(product)}
-                            className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors"
+                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
                             title="Edit Product"
                           >
                             <Edit2 size={16} />
@@ -212,7 +212,7 @@ export default function ProductList({ initialProducts }: ProductListProps) {
                               e.stopPropagation();
                               handleDeleteClick(product._id);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-50 pointer-events-auto"
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all relative z-50 pointer-events-auto"
                             title="Delete Product"
                           >
                             <Trash2 size={16} className="pointer-events-none" />

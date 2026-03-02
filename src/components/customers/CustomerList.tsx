@@ -170,21 +170,21 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                           {customer.contact || "N/A"}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-center font-bold text-emerald-600">
+                      <td className="px-4 py-4 text-sm text-center font-black text-emerald-600">
                         {customer.activeLotsCount || 0}
                       </td>
                       <td className="px-4 py-4 text-sm">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${customer.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${customer.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
                           }`}>
                           {customer.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button onClick={() => handleToggleStatus(customer._id, customer.isActive)} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => handleToggleStatus(customer._id, customer.isActive)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title={customer.isActive ? "Deactivate" : "Activate"}>
                             <Power size={16} />
                           </button>
-                          <button onClick={() => handleOpenEditModal(customer)} className="p-1.5 text-slate-400 hover:text-amber-600 transition-colors">
+                          <button onClick={() => handleOpenEditModal(customer)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Edit Customer">
                             <Edit2 size={16} />
                           </button>
                           <button
@@ -194,7 +194,7 @@ export default function CustomerList({ initialCustomers }: { initialCustomers: a
                               e.stopPropagation();
                               handleDeleteClick(customer._id);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors relative z-50 pointer-events-auto"
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all relative z-50 pointer-events-auto"
                             title="Delete Customer"
                           >
                             <Trash2 size={16} className="pointer-events-none" />

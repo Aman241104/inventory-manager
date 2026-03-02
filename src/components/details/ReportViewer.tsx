@@ -75,6 +75,9 @@ export default function ReportViewer({ products }: { products: any[] }) {
     setLoading(false);
   }, [filters, searchParams]);
 
+  const maxIn = Math.max(0, ...data.map((lot: any) => (lot.appendHistory?.length || 1)));
+  const maxSales = Math.max(0, ...data.map((lot: any) => lot.sales.length));
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchReport();
@@ -283,9 +286,21 @@ export default function ReportViewer({ products }: { products: any[] }) {
                 <thead>
                   <tr className="bg-slate-900 text-white">
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700">Lot Identification</th>
-                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700">Vendor</th>
-                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700 text-right">In Qty</th>
-                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700 text-right">Out Qty</th>
+                    
+                    {/* Dynamic Incoming Headers */}
+                    {Array.from({ length: maxIn }).map((_, i) => (
+                      <th key={`in-h-${i}`} className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700 text-right bg-emerald-900/50">
+                        In {i + 1}
+                      </th>
+                    ))}
+
+                    {/* Dynamic Outgoing Headers */}
+                    {Array.from({ length: maxSales }).map((_, i) => (
+                      <th key={`out-h-${i}`} className="px-4 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-700 text-right bg-indigo-900/50">
+                        Out {i + 1}
+                      </th>
+                    ))}
+
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-right">Current Balance</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-center no-print">Action</th>
                   </tr>
@@ -310,15 +325,47 @@ export default function ReportViewer({ products }: { products: any[] }) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-xs font-bold text-slate-500 uppercase tracking-tighter">{row.vendorName}</td>
-                        <td className="px-4 py-5 text-right">
-                          <div className="text-sm font-black text-slate-700">{row.purchasedQty}</div>
-                          <div className="text-[10px] font-medium text-slate-400 italic">@ ₹{row.purchasedRate}</div>
-                        </td>
-                        <td className="px-4 py-5 text-right">
-                          <div className="text-sm font-black text-indigo-600">{row.totalSoldQty}</div>
-                          <div className="text-[10px] font-medium text-slate-300 italic uppercase">Units Sold</div>
-                        </td>
+
+                        {/* Dynamic Incoming Data */}
+                        {Array.from({ length: maxIn }).map((_, i) => {
+                          const entry = (row.appendHistory && row.appendHistory.length > 0)
+                            ? row.appendHistory[i]
+                            : (i === 0 ? { quantity: row.purchasedQty, rate: row.purchasedRate, vendorNames: row.vendorNames || [] } : null);
+                          return (
+                            <td key={`in-c-${i}`} className="px-4 py-5 text-right border-r border-slate-100 bg-emerald-50/10">
+                              {entry ? (
+                                <div>
+                                  <div className="text-sm font-black text-slate-700">{entry.quantity}</div>
+                                  <div className="text-[10px] font-medium text-slate-400 italic">@ ₹{entry.rate}</div>
+                                  <div className="text-[8px] text-slate-400 truncate max-w-[100px]">
+                                    {entry.vendorNames && entry.vendorNames.length > 0 ? entry.vendorNames.join(", ") : "Direct Entry"}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-slate-100">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+
+                        {/* Dynamic Outgoing Data */}
+                        {Array.from({ length: maxSales }).map((_, i) => {
+                          const sale = row.sales[i];
+                          return (
+                            <td key={`out-c-${i}`} className="px-4 py-5 text-right border-r border-slate-100 bg-indigo-50/10">
+                              {sale ? (
+                                <div>
+                                  <div className="text-sm font-black text-indigo-600">{sale.quantity}</div>
+                                  <div className="text-[10px] font-medium text-slate-300 italic uppercase">@{sale.rate}</div>
+                                  <div className="text-[8px] text-slate-400 truncate max-w-[100px]">{sale.customerName}</div>
+                                </div>
+                              ) : (
+                                <span className="text-slate-100">-</span>
+                              )}
+                            </td>
+                          );
+                        })}
+
                         <td className={`px-4 py-5 text-right ${row.remainingQty > 0 ? "bg-amber-50/20" : row.remainingQty < 0 ? "bg-rose-50/20" : "bg-emerald-50/20"
                           }`}>
                           <div className={`text-xl font-black tracking-tighter ${row.remainingQty > 0 ? "text-amber-600" : row.remainingQty < 0 ? "text-rose-600" : "text-emerald-600"

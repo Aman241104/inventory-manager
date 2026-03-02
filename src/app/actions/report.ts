@@ -137,6 +137,19 @@ export async function getDetailedReport(filters: {
           purchasedQty: "$quantity",
           purchasedRate: "$rate",
           purchasedTotal: "$totalAmount",
+          appendHistory: {
+            $map: {
+              input: { $ifNull: ["$appendHistory", []] },
+              as: "h",
+              in: {
+                date: { $dateToString: { format: "%Y-%m-%d", date: "$$h.date" } },
+                quantity: "$$h.quantity",
+                rate: "$$h.rate",
+                vendorNames: "$$h.vendorNames",
+                type: "$$h.type"
+              }
+            }
+          },
           sales: 1,
           totalSoldQty: { $sum: "$sales.quantity" },
           remainingQty: { $subtract: ["$quantity", { $sum: "$sales.quantity" }] },

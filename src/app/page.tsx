@@ -15,6 +15,7 @@ import {
   History,
   AlertTriangle
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,7 @@ export default async function HomePage() {
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
 
+  const maxIn = Math.max(0, ...lotSummaries.map((lot: any) => (lot.appendHistory?.length || 1)));
   const maxSales = Math.max(0, ...lotSummaries.map((lot: any) => lot.sales.length));
 
   const calculateAge = (dateStr: string) => {
@@ -170,12 +172,18 @@ export default async function HomePage() {
                   <tr className="bg-white border-b-2 border-slate-100 text-slate-400">
                     <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest border-r border-slate-100 sticky left-0 bg-white z-30">Fruit / Lot</th>
                     <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest bg-white">Age</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest border-r border-slate-100 bg-emerald-50/50">Purchased</th>
+                    
+                    {/* Dynamic Incoming Columns */}
+                    {Array.from({ length: maxIn }).map((_, i) => (
+                      <th key={`in-${i}`} className="px-6 py-4 text-[10px] font-black text-emerald-600 uppercase tracking-widest border-r border-slate-100 bg-emerald-50/30">
+                        In {i + 1}
+                      </th>
+                    ))}
 
-                    {/* Dynamic Sales Columns */}
+                    {/* Dynamic Outgoing Columns */}
                     {Array.from({ length: maxSales }).map((_, i) => (
-                      <th key={i} className="px-6 py-4 text-[10px] font-black text-indigo-500 uppercase tracking-widest border-r border-slate-50 last:border-r-0">
-                        Sale {i + 1}
+                      <th key={`out-${i}`} className="px-6 py-4 text-[10px] font-black text-indigo-500 uppercase tracking-widest border-r border-slate-50 last:border-r-0">
+                        Out {i + 1}
                       </th>
                     ))}
 
@@ -185,7 +193,7 @@ export default async function HomePage() {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {sortedLots.length === 0 ? (
                     <tr>
-                      <td colSpan={maxSales + 4} className="px-6 py-12 text-center text-slate-400 italic font-medium">No active fruit batches found.</td>
+                      <td colSpan={maxIn + maxSales + 3} className="px-6 py-12 text-center text-slate-400 italic font-medium">No active fruit batches found.</td>
                     </tr>
                   ) : (
                     sortedLots.map((lot: any) => {
@@ -194,8 +202,14 @@ export default async function HomePage() {
                       const soldPercentage = Math.min(100, Math.max(0, (soldQty / lot.totalPurchased) * 100));
 
                       return (
-                        <tr key={lot.lotId} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-6 py-5 text-sm font-black text-slate-800 border-r border-slate-100 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
+                        <tr key={lot.lotId} className={cn(
+                          "hover:bg-slate-50 transition-colors group",
+                          lot.remainingStock < 0 ? "bg-rose-50/40 hover:bg-rose-50/60" : ""
+                        )}>
+                          <td className={cn(
+                            "px-6 py-5 text-sm font-black text-slate-800 border-r border-slate-100 sticky left-0 group-hover:bg-slate-50 z-10 transition-colors",
+                            lot.remainingStock < 0 ? "bg-rose-50 group-hover:bg-rose-100/80" : "bg-white"
+                          )}>
                             <div className="flex justify-between items-start gap-2">
                               <div>
                                 {lot.productName}
@@ -215,19 +229,36 @@ export default async function HomePage() {
                               <span className="font-bold text-slate-400 ml-1">{age}d</span>
                             )}
                           </td>
-                          <td className="px-6 py-5 border-r border-slate-100 bg-emerald-50/5">
-                            <div className="flex items-center gap-1">
-                              <span className="text-base font-black text-emerald-600">{lot.totalPurchased}</span>
-                            </div>
-                            <div className="w-20 h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
-                              <div className="h-full bg-emerald-500" style={{ width: `${soldPercentage}%` }} />
-                            </div>
-                          </td>
 
+                          {/* Dynamic Incoming Data */}
+                          {Array.from({ length: maxIn }).map((_, i) => {
+                            const entry = (lot.appendHistory && lot.appendHistory.length > 0) 
+                              ? lot.appendHistory[i] 
+                              : (i === 0 ? { quantity: lot.totalPurchased, vendorNames: lot.vendorNames || [], type: 'ORIGINAL' } : null);
+                            return (
+                              <td key={`in-cell-${i}`} className="px-6 py-5 border-r border-slate-100 bg-emerald-50/5 relative group/purch">
+                                {entry ? (
+                                  <div>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-base font-black text-emerald-600">{entry.quantity}</span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase truncate max-w-[100px]">
+                                      {entry.vendorNames && entry.vendorNames.length > 0 ? entry.vendorNames.join(", ") : "Direct Entry"}
+                                    </div>
+                                    <div className="text-[8px] text-indigo-400 font-black uppercase tracking-tighter">{entry.type || 'ORIGINAL'}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-100 text-xs">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+
+                          {/* Dynamic Outgoing Data */}
                           {Array.from({ length: maxSales }).map((_, i) => {
                             const sale = lot.sales[i];
                             return (
-                              <td key={i} className="px-6 py-5 border-r border-slate-50 last:border-r-0">
+                              <td key={`out-cell-${i}`} className="px-6 py-5 border-r border-slate-50 last:border-r-0">
                                 {sale ? (
                                   <div>
                                     <div className="flex items-center gap-1">

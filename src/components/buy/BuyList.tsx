@@ -415,53 +415,67 @@ export default function BuyList({
         </div>
 
         <div className="flex flex-col gap-4">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Entry Preview</h4>
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Live Receipt Preview</h4>
           {formData.productId && formData.vendorId ? (
-            <div className="flex-1 bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 flex flex-col justify-between animate-in fade-in slide-in-from-right-4 duration-500">
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-2xl font-black text-emerald-900">{selectedProduct?.name}</div>
-                  </div>
+            <div className="flex-1 bg-white border-2 border-slate-100 rounded-[2rem] p-8 flex flex-col justify-between animate-in fade-in slide-in-from-right-8 duration-500 shadow-xl shadow-slate-200/50 relative overflow-hidden group/receipt">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover/receipt:opacity-10 transition-opacity">
+                <ShoppingCart size={120} className="-mr-10 -mt-10 rotate-12" />
+              </div>
+              
+              <div className="space-y-6 relative z-10">
+                <div className="pb-4 border-b border-dashed border-slate-200">
+                  <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Incoming Inventory</div>
+                  <div className="text-3xl font-black text-slate-900 tracking-tight">{selectedProduct?.name}</div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <UserPlus size={16} className="text-indigo-500" />
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 text-slate-600">
+                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center shadow-sm border border-indigo-100/50">
+                      <UserPlus size={18} className="text-indigo-600" />
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Supplier</div>
-                      <div className="text-sm font-bold">{selectedVendor?.name}</div>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Supplier</div>
+                      <div className="text-sm font-bold text-slate-700">{selectedVendor?.name}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600">
-                    <div className="p-2 bg-white rounded-lg shadow-sm">
-                      <TrendingUp size={16} className="text-emerald-500" />
+                  
+                  <div className="flex items-center gap-4 text-slate-600">
+                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center shadow-sm border border-emerald-100/50">
+                      <TrendingUp size={18} className="text-emerald-600" />
                     </div>
                     <div>
-                      <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Incoming Stock</div>
-                      <div className="text-sm font-bold">{formData.quantity || 0} units @ ₹{formData.rate || 0}</div>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">Batch Details</div>
+                      <div className="text-sm font-bold text-slate-700">
+                        {formData.quantity || 0} Units 
+                        <span className="mx-2 text-slate-300 font-normal">@</span> 
+                        ₹{formData.rate || 0}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-emerald-100/50 mt-auto">
-                <div className="flex flex-col items-end text-emerald-900">
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Entry Summary</div>
-                  <div className="text-sm font-bold">
-                    <span className="text-emerald-600 font-black">{formData.quantity || 0}</span> Units
-                    <span className="mx-2 opacity-20">|</span>
-                    <span className="opacity-60 font-medium italic">₹{((Number(formData.quantity) || 0) * (Number(formData.rate) || 0)).toLocaleString()} Total</span>
+              <div className="pt-8 border-t-2 border-slate-50 mt-auto relative z-10">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Valuation</div>
+                    <div className="text-2xl font-black text-slate-900 tracking-tighter">
+                      ₹{((Number(formData.quantity) || 0) * (Number(formData.rate) || 0)).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100 uppercase tracking-tighter">
+                    Ready to Save
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex-1 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center p-8 text-center text-slate-300">
-              <ShoppingCart size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-medium">Complete the form to see<br />a live entry preview.</p>
+            <div className="flex-1 border-2 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center p-12 text-center text-slate-300 group">
+              <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                <ShoppingCart size={32} className="opacity-20" />
+              </div>
+              <p className="text-sm font-bold text-slate-400">Complete the form to<br />generate a live preview.</p>
+              <p className="text-[10px] text-slate-300 mt-2 font-medium uppercase tracking-widest">Awaiting Input...</p>
             </div>
           )}
         </div>

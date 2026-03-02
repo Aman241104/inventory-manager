@@ -154,6 +154,13 @@ export default function SellList({
 
   const handleSubmit = async (e: React.FormEvent | null, addAnother = false) => {
     if (e) e.preventDefault();
+    
+    // Validation: Sale date cannot be before purchase date
+    if (selectedLot && new Date(formData.date) < new Date(selectedLot.date)) {
+      alert(`Invalid Date: This batch was purchased on ${new Date(selectedLot.date).toLocaleDateString()}. You cannot record a sale before that.`);
+      return;
+    }
+
     console.log("Submitting sale data:", formData);
     setLoading(true);
 
@@ -222,6 +229,13 @@ export default function SellList({
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Edit Validation
+    if (editingSale && new Date(editFormData.date) < new Date(editingSale.purchaseId.date)) {
+        alert("Invalid Date: Sale cannot be before purchase date.");
+        return;
+    }
+
     setLoading(true);
     const res = await updateSale(editingSale._id, {
       quantity: Number(editFormData.quantity),
@@ -427,61 +441,74 @@ export default function SellList({
 
         {/* Context Panel Column */}
         <div className="flex flex-col gap-4">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lot Summary</h4>
+          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Batch Pulse Preview</h4>
           {selectedLot ? (
-            <div className="flex-1 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 flex flex-col justify-between animate-in fade-in slide-in-from-right-4 duration-500">
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-2xl font-black text-indigo-900">{selectedLot.lotName}</div>
-                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Selected Batch</p>
-                  </div>
-                  <div className="bg-white/80 px-2 py-1 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs">
-                    ₹{selectedLot.rate} <span className="text-[8px] opacity-50">BUY RATE</span>
-                  </div>
+            <div className="flex-1 bg-white border-2 border-slate-100 rounded-[2rem] p-8 flex flex-col justify-between animate-in fade-in slide-in-from-right-8 duration-500 shadow-xl shadow-slate-200/50 relative overflow-hidden group/receipt">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover/receipt:opacity-10 transition-opacity">
+                <BadgeDollarSign size={120} className="-mr-10 -mt-10 rotate-12" />
+              </div>
+              
+              <div className="space-y-6 relative z-10">
+                <div className="pb-4 border-b border-dashed border-slate-200">
+                  <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Outgoing Inventory</div>
+                  <div className="text-3xl font-black text-slate-900 tracking-tight truncate">{selectedLot.lotName}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/60 p-3 rounded-xl border border-indigo-100/50">
-                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Original</div>
-                    <div className="text-lg font-bold text-slate-700">{selectedLot.quantity}</div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Available</div>
+                    <div className="text-xl font-black text-indigo-600">{selectedLot.availableQty} <span className="text-[10px] opacity-50 font-bold">UNITS</span></div>
                   </div>
-                  <div className="bg-white/60 p-3 rounded-xl border border-indigo-100/50">
-                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Available</div>
-                    <div className="text-lg font-bold text-indigo-600">{selectedLot.availableQty}</div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Buy Rate</div>
+                    <div className="text-xl font-black text-slate-700">₹{selectedLot.rate}</div>
                   </div>
                 </div>
 
                 {/* Pulse Bar */}
-                <div className="space-y-2">
+                <div className="space-y-3 pt-2">
                   <div className="flex justify-between items-end">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock Pulse</span>
-                    <span className={`text-xs font-bold ${selectedLot.availableQty - (Number(formData.quantity) || 0) < 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                      {selectedLot.availableQty - (Number(formData.quantity) || 0)} Units Remaining
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory Pulse</span>
+                    <span className={cn(
+                        "text-[10px] font-black px-2 py-0.5 rounded-md",
+                        selectedLot.availableQty - (Number(formData.quantity) || 0) < 0 
+                            ? "bg-rose-100 text-rose-600" 
+                            : "bg-emerald-100 text-emerald-600"
+                    )}>
+                      {selectedLot.availableQty - (Number(formData.quantity) || 0)} UNITS LEFT
                     </span>
                   </div>
-                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden flex shadow-inner">
-                    <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.max(0, ((selectedLot.availableQty - (Number(formData.quantity) || 0)) / selectedLot.quantity) * 100)}%` }} />
-                    <div className="h-full bg-indigo-400 transition-all duration-500 opacity-80" style={{ width: `${Math.min(100, (Number(formData.quantity) || 0) / selectedLot.quantity * 100)}%` }} />
+                  <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex p-1 shadow-inner border border-slate-200/50">
+                    <div className="h-full bg-emerald-500 transition-all duration-500 rounded-full shadow-sm" style={{ width: `${Math.max(0, ((selectedLot.availableQty - (Number(formData.quantity) || 0)) / selectedLot.quantity) * 100)}%` }} />
+                    <div className="h-full bg-rose-400 transition-all duration-500 opacity-40 rounded-full mx-0.5" style={{ width: `${Math.min(100, (Number(formData.quantity) || 0) / selectedLot.quantity * 100)}%` }} />
                   </div>
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-indigo-100/50 mt-auto">
-                <div className="flex flex-col items-end text-indigo-900">
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1">Transaction Summary</div>
-                  <div className="text-sm font-bold">
-                    <span className="text-indigo-600 font-black">{formData.quantity || 0}</span> Units Sold
-                    <span className="mx-2 opacity-20">|</span>
-                    <span className="opacity-60 font-medium italic">₹{((Number(formData.quantity) || 0) * (Number(formData.rate) || 0)).toLocaleString()} Total</span>
+              <div className="pt-8 border-t-2 border-slate-50 mt-auto relative z-10">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Expected Revenue</div>
+                    <div className="text-2xl font-black text-slate-900 tracking-tighter">
+                      ₹{((Number(formData.quantity) || 0) * (Number(formData.rate) || 0)).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className={cn(
+                      "px-3 py-1 text-[10px] font-black rounded-full border uppercase tracking-tighter",
+                      isExtraSold ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                  )}>
+                    {isExtraSold ? "Shortage Detected" : "Ready to Sell"}
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex-1 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center p-8 text-center text-slate-300">
-              <TrendingUp size={48} className="mb-4 opacity-20" />
-              <p className="text-sm font-medium">Select a lot to see real-time<br />stock pulse and valuations.</p>
+            <div className="flex-1 border-2 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center p-12 text-center text-slate-300 group">
+                <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                    <TrendingUp size={32} className="opacity-20" />
+                </div>
+              <p className="text-sm font-bold text-slate-400">Select a lot to see<br />live stock pulse.</p>
+              <p className="text-[10px] text-slate-300 mt-2 font-medium uppercase tracking-widest">Awaiting Batch Selection...</p>
             </div>
           )}
         </div>

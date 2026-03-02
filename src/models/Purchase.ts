@@ -13,6 +13,15 @@ const PurchaseSchema = new Schema<IPurchase>(
     totalAmount: { type: Number },
     date: { type: Date, default: Date.now, index: true },
     notes: { type: String },
+    appendHistory: [
+      {
+        date: { type: Date, default: Date.now },
+        quantity: { type: Number, required: true },
+        rate: { type: Number, required: true },
+        vendorNames: [{ type: String }],
+        type: { type: String, enum: ['ORIGINAL', 'APPEND', 'MERGE'], default: 'ORIGINAL' }
+      }
+    ],
     isDeleted: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }

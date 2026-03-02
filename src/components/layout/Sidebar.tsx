@@ -75,16 +75,16 @@ export default function Sidebar() {
                     href={item.href}
                     onClick={() => setIsOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
+                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden",
                       isActive
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50"
+                        ? "bg-indigo-600 text-white shadow-[0_8px_20px_-6px_rgba(79,70,229,0.6)] scale-[1.02]"
                         : "hover:bg-slate-800 hover:text-white"
                     )}
                   >
                     <Icon size={20} className={cn(
                       isActive ? "text-white" : "text-slate-400 group-hover:text-emerald-400"
                     )} />
-                    <span className="font-bold text-sm">{item.label}</span>
+                    <span className="font-bold text-sm tracking-tight">{item.label}</span>
                   </Link>
                 );
               })}
@@ -102,9 +102,9 @@ export default function Sidebar() {
                     href={item.href}
                     onClick={() => setIsOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
+                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group",
                       isActive
-                        ? "bg-slate-700 text-white"
+                        ? "bg-slate-700 text-white shadow-lg shadow-black/20"
                         : "hover:bg-slate-800 hover:text-white"
                     )}
                   >
@@ -119,17 +119,19 @@ export default function Sidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-800 flex items-center justify-between">
+          <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex items-center justify-between">
             <div className="flex items-center gap-3 px-2 py-2">
-              <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-900/40 border border-indigo-400/20">
                 A
               </div>
               <div className="flex-1 overflow-hidden min-w-[100px]">
-                <p className="text-sm font-medium text-white truncate">Admin User</p>
-                <p className="text-xs text-slate-500 truncate">admin@fruit.com</p>
+                <p className="text-sm font-bold text-white truncate">Admin User</p>
+                <p className="text-[10px] text-slate-500 truncate font-medium">admin@fruit.com</p>
               </div>
             </div>
-            <ShortcutHelp />
+            <div className="bg-slate-800/50 p-0.5 rounded-lg border border-slate-700/50">
+              <ShortcutHelp />
+            </div>
           </div>
         </div>
       </aside>

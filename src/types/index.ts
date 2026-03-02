@@ -39,6 +39,13 @@ export interface IPurchase extends Document {
   totalAmount: number;
   date: string | Date;
   notes?: string;
+  appendHistory?: {
+    date: Date;
+    quantity: number;
+    rate: number;
+    vendorNames: string[];
+    type: 'ORIGINAL' | 'APPEND' | 'MERGE';
+  }[];
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -67,6 +74,13 @@ export interface ILotSummary {
   purchaseRate: number;
   date: string;
   totalPurchased: number;
+  appendHistory?: {
+    date: string;
+    quantity: number;
+    rate: number;
+    vendorNames: string[];
+    type: string;
+  }[];
   sales: {
     customerName: string;
     quantity: number;

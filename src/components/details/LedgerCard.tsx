@@ -8,6 +8,7 @@ export default function LedgerCard({ data }: { data: any }) {
     vendorName,
     purchasedQty,
     purchasedRate,
+    appendHistory,
     sales,
     totalSoldQty,
     remainingQty,
@@ -33,15 +34,35 @@ export default function LedgerCard({ data }: { data: any }) {
       <div className="flex min-h-0">
         
         {/* Left Side: Purchase (Narrower & Compact) */}
-        <div className="w-[25%] p-2 print:p-1 border-r-2 border-slate-900 ledger-border-r flex flex-col print-text-black bg-slate-50/30">
-          <div className="text-[8px] font-black uppercase text-slate-400 mb-1 border-b border-slate-200">Purchase</div>
-          <div className="space-y-0.5">
-            <div className="font-bold text-xs print:text-[10px] leading-tight truncate">
-              {vendorNames?.join(", ") || vendorName}
-            </div>
-            <div className="text-[10px] print:text-[9px] font-medium italic">
-              {purchasedRate > 0 ? `@ ₹${purchasedRate}` : 'Rate: N/A'}
-            </div>
+        <div className="w-[35%] p-2 print:p-1 border-r-2 border-slate-900 ledger-border-r flex flex-col print-text-black bg-slate-50/30">
+          <div className="text-[8px] font-black uppercase text-slate-400 mb-1 border-b border-slate-200">Purchase / Incoming History</div>
+          <div className="space-y-1.5">
+            {appendHistory && appendHistory.length > 0 ? (
+              <div className="space-y-1">
+                {appendHistory.map((h: any, i: number) => (
+                  <div key={i} className="text-[9px] print:text-[8px] border-b border-slate-100 pb-0.5 last:border-0">
+                    <div className="flex justify-between font-bold">
+                      <span>{h.date}</span>
+                      <span className="text-indigo-600">{h.quantity} units</span>
+                    </div>
+                    <div className="flex justify-between italic text-slate-500">
+                      <span className="truncate max-w-[100px]">{h.vendorNames?.join(", ")}</span>
+                      <span>@ ₹{h.rate}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                <div className="font-bold text-xs print:text-[10px] leading-tight truncate">
+                  {vendorNames?.join(", ") || vendorName}
+                </div>
+                <div className="text-[10px] print:text-[9px] font-medium italic">
+                  {purchasedRate > 0 ? `@ ₹${purchasedRate}` : 'Rate: N/A'}
+                </div>
+              </div>
+            )}
+            
             {notes && (
               <div className="mt-1 pt-1 border-t border-dotted border-slate-300 text-[8px] text-slate-500 italic leading-tight">
                 {notes}

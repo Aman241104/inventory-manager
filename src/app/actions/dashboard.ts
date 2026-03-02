@@ -65,10 +65,24 @@ export async function getDashboardStats() {
           productName: "$product.name",
           unitType: "$product.unitType",
           lotName: 1,
+          vendorNames: 1,
           purchaseRate: "$rate",
           date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
           totalPurchased: "$quantity",
           remainingStock: { $subtract: ["$quantity", { $sum: "$sales.quantity" }] },
+          appendHistory: {
+            $map: {
+              input: { $ifNull: ["$appendHistory", []] },
+              as: "h",
+              in: {
+                date: { $dateToString: { format: "%Y-%m-%d", date: "$$h.date" } },
+                quantity: "$$h.quantity",
+                rate: "$$h.rate",
+                vendorNames: "$$h.vendorNames",
+                type: "$$h.type"
+              }
+            }
+          },
           sales: 1,
           status: {
             $let: {
