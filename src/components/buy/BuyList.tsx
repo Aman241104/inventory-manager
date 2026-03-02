@@ -155,7 +155,8 @@ export default function BuyList({
         quantity: "",
         rate: "",
         date: formData.date,
-        notes: ""
+        notes: "",
+        targetLotId: ""
       });
       router.refresh();
       if (onSuccess) onSuccess();

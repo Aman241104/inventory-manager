@@ -51,7 +51,7 @@ export async function restoreItem(type: 'lot' | 'sale' | 'product' | 'vendor' | 
 
     if (!model) return { success: false, error: "Invalid type" };
 
-    const item = await model.findByIdAndUpdate(id, { isDeleted: false }, { new: true });
+    const item: any = await (model as mongoose.Model<any>).findByIdAndUpdate(id, { isDeleted: false }, { new: true });
 
     // Side effects
     if (type === 'sale' && item) {
