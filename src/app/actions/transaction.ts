@@ -15,7 +15,7 @@ import mongoose, { Types } from "mongoose";
  * Adds a purchase. Automatically clubs purchases for the same product on the same day 
  * into one Batch/Lot.
  */
-export async function addPurchase(data: Partial<IPurchase> & { date: string | Date; vendorId?: string }) {
+export async function addPurchase(data: Partial<IPurchase> & { date: string | Date; vendorId?: string; targetLotId?: string }) {
   try {
     await connectDB();
 
@@ -28,48 +28,70 @@ export async function addPurchase(data: Partial<IPurchase> & { date: string | Da
     const vendor = data.vendorId ? await Vendor.findById(data.vendorId) : null;
     const vendorName = vendor ? vendor.name : "Unknown Vendor";
 
-    // Find existing lot for same product on the same day
-    const existingLot = await Purchase.findOne({
-      productId: new mongoose.Types.ObjectId(data.productId),
-      date: { $gte: startOfDay, $lte: endOfDay },
-      isDeleted: false
-    });
+    if (data.targetLotId) {
+      // Logic for adding to an SPECIFIC existing lot (Explicit Merge)
+      const existingLot = await Purchase.findById(data.targetLotId);
+      if (!existingLot) return { success: false, error: "Target batch not found" };
 
-    if (existingLot) {
-      // Clubbing logic: Add quantity, update rate
-      existingLot.quantity = Number(existingLot.quantity) + Number(data.quantity);
-      existingLot.remainingQty = Number(existingLot.remainingQty) + Number(data.quantity);
+      // Calculate weighted average rate
+      const totalQty = existingLot.quantity + Number(data.quantity);
+      const weightedRate = ((existingLot.quantity * existingLot.rate) + (Number(data.quantity) * Number(data.rate))) / totalQty;
 
-      // Update rate to the latest one
-      if (data.rate !== undefined) {
-        existingLot.rate = data.rate;
-      }
-
-      // Add vendor if not already present
+      existingLot.quantity = totalQty;
+      existingLot.remainingQty = existingLot.remainingQty + Number(data.quantity);
+      existingLot.rate = Number(weightedRate.toFixed(2));
+      existingLot.notes = (existingLot.notes ? existingLot.notes + "; " : "") + 
+                         `[APPEND]: Added ${data.quantity} units @ ₹${data.rate}. ` + (data.notes || "");
+      
+      // Add vendor if new
       if (data.vendorId && !existingLot.vendorIds.some((id: any) => id.toString() === data.vendorId)) {
         existingLot.vendorIds.push(new mongoose.Types.ObjectId(data.vendorId));
         existingLot.vendorNames.push(vendorName);
       }
-
-      existingLot.notes = (existingLot.notes ? existingLot.notes + "; " : "") + (data.notes || "");
       await existingLot.save();
     } else {
-      // Auto-generate lot name: LOT-[YYYYMMDD]-[PRODUCT_CODE]
-      const product = await Product.findById(data.productId);
-      const productPrefix = product ? product.name.substring(0, 3).toUpperCase() : "LOT";
-      const dateStr = `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}`;
-      const lotName = `${productPrefix}-${dateStr}`;
-
-      const purchase = new Purchase({
-        ...data,
+      // Find existing lot for same product on the same day (Auto-Clubbing)
+      const existingLot = await Purchase.findOne({
         productId: new mongoose.Types.ObjectId(data.productId),
-        vendorIds: data.vendorId ? [new mongoose.Types.ObjectId(data.vendorId)] : [],
-        vendorNames: vendor ? [vendorName] : [],
-        lotName: lotName,
-        remainingQty: Number(data.quantity),
-        date: purchaseDate
+        date: { $gte: startOfDay, $lte: endOfDay },
+        isDeleted: false
       });
-      await purchase.save();
+
+      if (existingLot) {
+        // Clubbing logic: Add quantity, update rate (Weighted average for auto-clubbing too)
+        const totalQty = existingLot.quantity + Number(data.quantity);
+        const weightedRate = ((existingLot.quantity * existingLot.rate) + (Number(data.quantity) * Number(data.rate))) / totalQty;
+
+        existingLot.quantity = totalQty;
+        existingLot.remainingQty = existingLot.remainingQty + Number(data.quantity);
+        existingLot.rate = Number(weightedRate.toFixed(2));
+
+        // Add vendor if not already present
+        if (data.vendorId && !existingLot.vendorIds.some((id: any) => id.toString() === data.vendorId)) {
+          existingLot.vendorIds.push(new mongoose.Types.ObjectId(data.vendorId));
+          existingLot.vendorNames.push(vendorName);
+        }
+
+        existingLot.notes = (existingLot.notes ? existingLot.notes + "; " : "") + (data.notes || "");
+        await existingLot.save();
+      } else {
+        // Auto-generate lot name: LOT-[YYYYMMDD]-[PRODUCT_CODE]
+        const product = await Product.findById(data.productId);
+        const productPrefix = product ? product.name.substring(0, 3).toUpperCase() : "LOT";
+        const dateStr = `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}`;
+        const lotName = `${productPrefix}-${dateStr}`;
+
+        const purchase = new Purchase({
+          ...data,
+          productId: new mongoose.Types.ObjectId(data.productId),
+          vendorIds: data.vendorId ? [new mongoose.Types.ObjectId(data.vendorId)] : [],
+          vendorNames: vendor ? [vendorName] : [],
+          lotName: lotName,
+          remainingQty: Number(data.quantity),
+          date: purchaseDate
+        });
+        await purchase.save();
+      }
     }
 
     revalidatePath("/transactions");
@@ -487,3 +509,67 @@ export async function getSales(fromDate?: string, toDate?: string) {
     return { success: false, error: "Failed to fetch sales" };
   }
 }
+
+/**
+ * Merges source lot into target lot.
+ * Recalculates weighted average rate and moves all sales.
+ */
+export async function mergeLotsAction(sourceId: string, targetId: string) {
+  try {
+    await connectDB();
+
+    const source = await Purchase.findById(sourceId);
+    const target = await Purchase.findById(targetId);
+
+    if (!source || !target) return { success: false, error: "One or both lots not found" };
+    if (source.productId.toString() !== target.productId.toString()) {
+      return { success: false, error: "Cannot merge different products" };
+    }
+
+    // 1. Calculate weighted average rate
+    const totalQty = source.quantity + target.quantity;
+    const weightedRate = ((source.quantity * source.rate) + (target.quantity * target.rate)) / totalQty;
+
+    // 2. Reparent all sales from source to target
+    await Sale.updateMany(
+      { purchaseId: source._id, isDeleted: false },
+      { purchaseId: target._id }
+    );
+
+    // 3. Update Target with combined values
+    target.quantity = totalQty;
+    target.remainingQty = target.remainingQty + source.remainingQty;
+    target.rate = Number(weightedRate.toFixed(2));
+    target.notes = (target.notes ? target.notes + "\n" : "") + 
+                   `[MERGE]: Combined with ${source.lotName} (${source.quantity} units @ ₹${source.rate})`;
+    
+    // Add unique vendor IDs from source to target
+    source.vendorIds.forEach((sid: any) => {
+      if (!target.vendorIds.some((tid: any) => tid.toString() === sid.toString())) {
+        target.vendorIds.push(sid);
+      }
+    });
+    
+    source.vendorNames.forEach((name: string) => {
+      if (!target.vendorNames.includes(name)) {
+        target.vendorNames.push(name);
+      }
+    });
+
+    await target.save();
+
+    // 4. Soft delete source
+    source.isDeleted = true;
+    source.notes = (source.notes ? source.notes + "\n" : "") + `[MERGE]: Merged into ${target.lotName}`;
+    await source.save();
+
+    revalidatePath("/");
+    revalidatePath("/details");
+    revalidatePath("/transactions");
+    return { success: true };
+  } catch (error) {
+    console.error("Merge error:", error);
+    return { success: false, error: "Failed to merge batches" };
+  }
+}
+

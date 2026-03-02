@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, Calendar, Filter, X, UserPlus, Apple, ShoppingCart, TrendingUp, History, Info, CheckCircle2, Edit2, Trash2 } from "lucide-react";
+import { Plus, Calendar, Filter, X, UserPlus, Apple, ShoppingCart, TrendingUp, History, Info, CheckCircle2, Edit2, Trash2, GitMerge } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Combobox } from "@/components/ui/Combobox";
 import EditableCell from "@/components/ui/EditableCell";
-import { addPurchase, addVendorAction, addProductAction, updatePurchase } from "@/app/actions/transaction";
+import { addPurchase, addVendorAction, addProductAction, updatePurchase, mergeLotsAction } from "@/app/actions/transaction";
 import { deleteLot } from "@/app/actions/report";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,11 @@ export default function BuyList({
   const [vendors, setVendors] = useState(initialVendors);
   const [products, setProducts] = useState(initialProducts);
 
+  // Merge States
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [sourceLot, setSourceLot] = useState<any>(null);
+  const [targetLotId, setTargetLotId] = useState("");
+
   // Edit Lot States
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<any>(null);
@@ -56,7 +61,8 @@ export default function BuyList({
     quantity: "",
     rate: "",
     date: new Date().toISOString().split('T')[0],
-    notes: ""
+    notes: "",
+    targetLotId: ""
   });
 
   const [newVendor, setNewVendor] = useState({ name: "", contact: "" });
@@ -171,6 +177,26 @@ export default function BuyList({
     setIsEditModalOpen(true);
   };
 
+  const handleOpenMerge = (purchase: any) => {
+    setSourceLot(purchase);
+    setTargetLotId("");
+    setIsMergeModalOpen(true);
+  };
+
+  const handleMerge = async () => {
+    if (!sourceLot || !targetLotId) return;
+    setLoading(true);
+    const res = await mergeLotsAction(sourceLot._id, targetLotId);
+    if (res.success) {
+      setIsMergeModalOpen(false);
+      if (onSuccess) onSuccess();
+      router.refresh();
+    } else {
+      alert(res.error || "Merge failed");
+    }
+    setLoading(false);
+  };
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -237,7 +263,10 @@ export default function BuyList({
   const selectedProduct = products.find(p => p._id === formData.productId);
   const selectedVendor = vendors.find(v => v._id === formData.vendorId);
 
-  const isFormValid = formData.productId && formData.vendorId && Number(formData.quantity) > 0;
+  const isFormValid = formData.productId && 
+                     formData.vendorId && 
+                     Number(formData.quantity) > 0 && 
+                     (formData.targetLotId === "" || (formData.targetLotId !== "" && formData.targetLotId !== "SELECT_PENDING"));
 
   const handleCancel = (isModal: boolean) => {
     if (isModal) {
@@ -251,7 +280,8 @@ export default function BuyList({
         quantity: "",
         rate: "",
         date: new Date().toISOString().split('T')[0],
-        notes: ""
+        notes: "",
+        targetLotId: ""
       });
     }
   };
@@ -313,7 +343,42 @@ export default function BuyList({
                 className="w-full px-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
               />
             </div>
+            {formData.productId && (
+              <div className="flex flex-col justify-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={!!formData.targetLotId}
+                    onChange={(e) => setFormData({ ...formData, targetLotId: e.target.checked ? "SELECT_PENDING" : "" })}
+                    className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-slate-700 transition-colors">Append to existing batch?</span>
+                </label>
+              </div>
+            )}
           </div>
+
+          {formData.targetLotId !== "" && formData.productId && (
+            <div className="animate-in slide-in-from-top-2 duration-300">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Select Target Batch</label>
+              <select
+                value={formData.targetLotId === "SELECT_PENDING" ? "" : formData.targetLotId}
+                required
+                onChange={(e) => setFormData({ ...formData, targetLotId: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white border-2 border-emerald-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+              >
+                <option value="">Choose a batch to merge into...</option>
+                {purchases
+                  .filter(p => p.productId?._id === formData.productId && !p.isOptimistic)
+                  .map(p => (
+                    <option key={p._id} value={p._id}>
+                      {p.lotName} (Stock: {p.remainingQty} | ₹{p.rate})
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -554,6 +619,14 @@ export default function BuyList({
                       <td className="px-4 py-4 text-sm font-bold text-slate-800 text-right">₹{p.quantity * p.rate}</td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenMerge(p)}
+                            disabled={p.isOptimistic}
+                            className="p-1 text-slate-400 hover:text-orange-600 transition-colors disabled:opacity-0"
+                            title="Merge with another batch"
+                          >
+                            <GitMerge size={16} />
+                          </button>
                           <button onClick={() => handleOpenEdit(p)} disabled={p.isOptimistic} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-0">
                             <Edit2 size={16} />
                           </button>
@@ -641,6 +714,82 @@ export default function BuyList({
             <Button type="submit" disabled={loading}>{loading ? "Adding..." : "Add Vendor"}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Merge Modal */}
+      <Modal
+        isOpen={isMergeModalOpen}
+        onClose={() => setIsMergeModalOpen(false)}
+        title="Merge Batches"
+      >
+        <div className="space-y-6">
+          {sourceLot && (
+            <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl space-y-2">
+              <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Source Batch (To be merged and removed)</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <div className="font-bold text-slate-800">{sourceLot.productId?.name}</div>
+                  <div className="text-xs text-slate-500">{sourceLot.lotName} • {sourceLot.quantity} units @ ₹{sourceLot.rate}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Target Batch (To merge into)</label>
+            <select
+              value={targetLotId}
+              onChange={(e) => setTargetLotId(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+            >
+              <option value="">Choose a target batch...</option>
+              {purchases
+                .filter(p => p._id !== sourceLot?._id && p.productId?._id === sourceLot?.productId?._id && !p.isOptimistic)
+                .map(p => (
+                  <option key={p._id} value={p._id}>
+                    {p.lotName} ({p.quantity} units @ ₹{p.rate})
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          {sourceLot && targetLotId && (
+            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-3">
+              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Merged Preview</p>
+              {(() => {
+                const target = purchases.find(p => p._id === targetLotId);
+                if (!target) return null;
+                const totalQty = sourceLot.quantity + target.quantity;
+                const weightedRate = ((sourceLot.quantity * sourceLot.rate) + (target.quantity * target.rate)) / totalQty;
+                return (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">New Total Quantity:</span>
+                      <span className="font-bold text-slate-800">{totalQty} units</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">New Average Rate:</span>
+                      <span className="font-bold text-indigo-600">₹{weightedRate.toFixed(2)}</span>
+                    </div>
+                    <p className="text-[10px] text-indigo-400 italic pt-2">* All sales from {sourceLot.lotName} will be moved to {target.lotName}.</p>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button variant="outline" onClick={() => setIsMergeModalOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleMerge} 
+              disabled={loading || !targetLotId}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {loading ? "Merging..." : "Confirm & Merge"}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
